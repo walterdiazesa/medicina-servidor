@@ -1,5 +1,6 @@
 import cluster from "cluster";
 import express from "express";
+import cors from "cors";
 import { cpus } from "os";
 import "dotenv/config";
 
@@ -23,6 +24,7 @@ if (cluster.isPrimary && process.env.NODE_ENV.trim() !== "DEV") {
 } else {
   const app = express();
 
+  app.use(cors()); // Allow * origin
   app.use(express.json());
 
   app.get("/", (req, res) => res.send([{ cluster }, { cpus: cpus() }]));
@@ -30,7 +32,7 @@ if (cluster.isPrimary && process.env.NODE_ENV.trim() !== "DEV") {
   //app.get("/test", (req, res) => res.send([{ cluster }, { cpus: cpus() }]));
   app.use("/test", testRoutes);
 
-  app.listen(process.env.PORT || 80, () =>
+  app.listen(process.env.PORT || 8080, () =>
     console.log("Medicina API running...")
   );
 }

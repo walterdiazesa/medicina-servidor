@@ -24,6 +24,8 @@ if (cluster.isPrimary && process.env.NODE_ENV.trim() !== "DEV") {
 } else {
   const app = express();
 
+  // TO-DO: add specific cors, e.g GET: /test (cors("[next*]"), POST: /test (cors("*")))
+  // Cors doc: https://stackabuse.com/handling-cors-with-node-js/
   app.use(cors()); // Allow * origin
   app.use(express.json());
 

@@ -20,8 +20,14 @@ export async function getTest(id: string) {
   return await prisma.test.findUnique({ where: { id } });
 }
 
-export async function getTests(limit?: number) {
-  return await prisma.test.findMany(limit ? { take: limit } : undefined);
+export async function getTests({
+  limit,
+  order = "asc",
+}: {
+  limit?: number;
+  order?: "asc" | "desc";
+}) {
+  return await prisma.test.findMany({ take: limit, orderBy: { date: order } });
 }
 
 export async function createTest(data: Test) {

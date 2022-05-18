@@ -8,16 +8,21 @@ import "dotenv/config";
 import testRoutes from "./routes/test/index.js";
 import { DefaultEventsMap } from "socket.io/dist/typed-events";
 
+import { createAdapter } from "@socket.io/redis-adapter";
+import { createClient } from "redis";
+
 const numCpus = cpus().length;
 
-let _io: SocketIOServer<
-  DefaultEventsMap,
-  DefaultEventsMap,
-  DefaultEventsMap,
-  any
->;
+let _io: {
+  cluster: number;
+  io: SocketIOServer<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap, any>;
+}[] = [];
 
-if (cluster.isPrimary && process.env.NODE_ENV.trim() !== "DEV") {
+export const getActiveIO = () => {
+  return _io[0];
+};
+
+if (cluster.isPrimary /*  && process.env.NODE_ENV.trim() !== "DEV" */) {
   for (var i = 0; i < numCpus; i++) {
     cluster.fork();
   }
@@ -27,6 +32,10 @@ if (cluster.isPrimary && process.env.NODE_ENV.trim() !== "DEV") {
       "Worker %d died with code/signal %s. Restarting worker...",
       worker.process.pid,
       signal || code
+    );
+    _io.splice(
+      _io.findIndex((ioItem) => ioItem.cluster === worker.id),
+      1
     );
     cluster.fork();
   });
@@ -46,10 +55,23 @@ if (cluster.isPrimary && process.env.NODE_ENV.trim() !== "DEV") {
   const server = app.listen(process.env.PORT || 8080, () =>
     console.log("Medicina API running...")
   );
-  _io = new SocketIOServer(server, { cors: { origin: "*" } }); // APP_HOST
-  _io.on("connection", (socket) => {
-    socket.emit("welcome", "Hello " + socket.id);
-  });
-}
+  const io = new SocketIOServer(server, {
+    cors: { origin: "*" },
+    transports: ["websocket"],
+  }); // APP_HOST
 
-export const io = _io;
+  const pubClient = createClient({
+    url: process.env.REDISPUBSUB.trim().split("|")[0],
+    password: process.env.REDISPUBSUB.trim().split("|")[1],
+  });
+  const subClient = pubClient.duplicate();
+  Promise.all([pubClient.connect(), subClient.connect()]).then(() => {
+    io.adapter(createAdapter(pubClient, subClient));
+  });
+
+  /* io.on("connection", (socket) => {
+    socket.emit("welcome", "Hello " + socket.id);
+  }); */
+
+  _io.push({ cluster: cluster.worker!.id, io });
+}

@@ -1,5 +1,6 @@
 import { Prisma } from "@prisma/client";
 import axios from "axios";
+import { tests } from "../../mockdata.js";
 import { prisma } from "../handler.js";
 
 interface TestItem {
@@ -18,6 +19,7 @@ interface Test {
 }
 
 export async function getTest(id: string) {
+  // if (process.env.NODE_ENV.trim() === "DEV") return tests[0];
   return await prisma.test.findUnique({ where: { id } });
 }
 
@@ -28,7 +30,11 @@ export async function getTests({
   limit?: number;
   order?: "asc" | "desc";
 }) {
-  return await prisma.test.findMany({ take: limit, orderBy: { date: order } });
+  // if (process.env.NODE_ENV.trim() === "DEV") return tests;
+  return await prisma.test.findMany({
+    take: limit,
+    orderBy: { date: order },
+  });
 }
 
 export async function createTest(data: Test) {

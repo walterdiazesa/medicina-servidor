@@ -5,11 +5,18 @@ import { cpus } from "os";
 import { Server as SocketIOServer } from "socket.io";
 import "dotenv/config";
 
-import testRoutes from "./routes/test/index.js";
+import {
+  testRoutes,
+  userRoutes,
+  labRoutes,
+  authRoutes,
+} from "./routes/index.js";
 import { DefaultEventsMap } from "socket.io/dist/typed-events";
 
 import { createAdapter } from "@socket.io/redis-adapter";
 import { createClient } from "redis";
+import { RedisClient } from "./redis/index.js";
+import { cookieParser } from "./routes/middlewares/index.js";
 
 const numCpus = cpus().length;
 
@@ -22,7 +29,8 @@ export const getActiveIO = () => {
   return _io[0];
 };
 
-if (cluster.isPrimary /*  && process.env.NODE_ENV.trim() !== "DEV" */) {
+// && process.env.NODE_ENV.trim() !== "DEV"
+if (cluster.isPrimary) {
   for (var i = 0; i < numCpus; i++) {
     cluster.fork();
   }
@@ -46,11 +54,15 @@ if (cluster.isPrimary /*  && process.env.NODE_ENV.trim() !== "DEV" */) {
   // Cors doc: https://stackabuse.com/handling-cors-with-node-js/
   app.use(cors()); // Allow * origin
   app.use(express.json());
+  app.use(cookieParser);
 
   app.get("/", (req, res) => res.send([{ cluster }, { cpus: cpus() }]));
 
   //app.get("/test", (req, res) => res.send([{ cluster }, { cpus: cpus() }]));
   app.use("/test", testRoutes);
+  app.use("/users", userRoutes);
+  app.use("/labs", labRoutes);
+  app.use("/auth", authRoutes);
 
   const server = app.listen(process.env.PORT || 8080, () =>
     console.log("Medicina API running...")
@@ -60,18 +72,21 @@ if (cluster.isPrimary /*  && process.env.NODE_ENV.trim() !== "DEV" */) {
     transports: ["websocket"],
   }); // APP_HOST
 
-  const pubClient = createClient({
-    url: process.env.REDISPUBSUB.trim().split("|")[0],
-    password: process.env.REDISPUBSUB.trim().split("|")[1],
-  });
-  const subClient = pubClient.duplicate();
-  Promise.all([pubClient.connect(), subClient.connect()]).then(() => {
-    io.adapter(createAdapter(pubClient, subClient));
-  });
+  const pubConnection = new RedisClient();
 
-  /* io.on("connection", (socket) => {
-    socket.emit("welcome", "Hello " + socket.id);
-  }); */
+  pubConnection
+    .getClient()
+    .then((pubClient) => {
+      pubClient.on("error", (err) => {
+        console.error("RedisClient - Pub", err.message);
+      });
+      const subClient = pubClient.duplicate();
+      subClient.on("error", (err) => {
+        console.error("RedisClient - Sub", err.message);
+      });
+      io.adapter(createAdapter(pubClient, subClient));
+    })
+    .catch((e) => console.log("Can't connect to the Redis PubSub Client"));
 
   _io.push({ cluster: cluster.worker!.id, io });
 }

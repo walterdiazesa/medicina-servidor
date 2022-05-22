@@ -33,7 +33,30 @@ model Patient {
 model Lab {
   id    String  @id @default(auto()) @map("_id") @db.ObjectId
   email String  @unique
-  name  String
+  hash String
+  name  String @unique
+  phone String @unique
+  address String?
+  publicPhone String
+  web String? 
+  publicEmail String
   img   String
+  userIds String[]   @db.ObjectId
+  ownerIds String[]   @db.ObjectId
   Test  Test[]
+  Users User[] @relation(fields: [userIds], references: [id])
+  Owners User[] @relation("owners", fields: [ownerIds], references: [id])
+}
+
+model User {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+  email String @unique
+  slug String @unique
+  name String
+  hash String
+  profileImg String?
+  labIds String[] @db.ObjectId
+  Lab Lab[] @relation(fields: [labIds], references: [id])
+  ownerIds String[] @db.ObjectId
+  Owners Lab[] @relation("owners", fields: [ownerIds], references: [id])
 }

@@ -15,7 +15,7 @@ import { DefaultEventsMap } from "socket.io/dist/typed-events";
 
 import { createAdapter } from "@socket.io/redis-adapter";
 import { createClient } from "redis";
-import { RedisClient } from "./redis/index.js";
+import { RedisClient, RedisSubClient } from "./redis/index.js";
 import { cookieParser } from "./routes/middlewares/index.js";
 
 const numCpus = cpus().length;
@@ -73,7 +73,7 @@ if (cluster.isPrimary) {
   }); // APP_HOST
 
   const pubConnection = new RedisClient();
-  const subConnection = new RedisClient();
+  const subConnection = new RedisSubClient();
 
   Promise.all([pubConnection.getClient(), subConnection.getClient()])
     .then(([pubClient, subClient]) => {

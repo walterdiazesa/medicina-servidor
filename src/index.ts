@@ -73,14 +73,13 @@ if (cluster.isPrimary) {
   }); // APP_HOST
 
   const pubConnection = new RedisClient();
+  const subConnection = new RedisClient();
 
-  pubConnection
-    .getClient()
-    .then((pubClient) => {
+  Promise.all([pubConnection.getClient(), subConnection.getClient()])
+    .then(([pubClient, subClient]) => {
       pubClient.on("error", (err) => {
         console.error("RedisClient - Pub", err.message);
       });
-      const subClient = pubClient.duplicate();
       subClient.on("error", (err) => {
         console.error("RedisClient - Sub", err.message);
       });

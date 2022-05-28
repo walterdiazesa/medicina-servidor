@@ -12,12 +12,12 @@ datasource db {
 
 model Test {
   id       String    @id @default(auto()) @map("_id") @db.ObjectId
-  lab      Lab?      @relation(fields: [labId], references: [id])
+  lab      Lab      @relation(fields: [labId], references: [id])
   patient  Patient?  @relation(fields: [patientId], references: [id])
   sex      String
   tests    Json
   date   DateTime
-  labId String?    @db.ObjectId
+  labId String    @db.ObjectId
   patientId String?    @db.ObjectId
 }
 
@@ -36,11 +36,12 @@ model Lab {
   hash String
   name  String @unique
   phone String @unique
-  address String?
+  address String
   publicPhone String
   web String? 
   publicEmail String
   img   String
+  installer String?
   userIds String[]   @db.ObjectId
   ownerIds String[]   @db.ObjectId
   Test  Test[]

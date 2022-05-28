@@ -3,8 +3,9 @@ import { prisma } from "../handler.js";
 import { hash as hashPassword } from "../../crypto/index.js";
 import { NotUnique } from "../../routes/Responses/index.js";
 import { signJWT } from "../../auth/index.js";
-import { Prisma } from "@prisma/client";
+import { Lab, Prisma } from "@prisma/client";
 import { isValidObjectID } from "../../utils/index.js";
+import { Payload } from "../../types/Auth";
 
 export async function getLaboratory(lab: string) {
   const select: Prisma.LabSelect = {
@@ -27,14 +28,11 @@ export async function getLaboratory(lab: string) {
       });
 }
 
-export async function getLaboratories({
-  limit,
-  order = "asc",
-}: DefaultSelectMany) {
-  return await prisma.lab.findMany({
-    take: limit,
-    orderBy: { id: order },
-    select: {
+export async function getLaboratories(
+  {
+    limit,
+    order = "asc",
+    fields = {
       id: true,
       email: true,
       name: true,
@@ -45,6 +43,26 @@ export async function getLaboratories({
       publicEmail: true,
       img: true,
     },
+    labFromUser = true,
+  }: DefaultSelectMany & {
+    fields?: Prisma.LabSelect;
+    labFromUser?: boolean;
+  },
+  user: Payload
+) {
+  if (fields.hash) fields.hash = false;
+  if (!user["sub-user"] && !labFromUser) return [];
+  return await prisma.lab.findMany({
+    take: limit,
+    orderBy: { id: order },
+    where: {
+      OR: [
+        { id: labFromUser ? user["sub-lab"] : undefined },
+        { ownerIds: { has: user["sub-user"] } },
+        { userIds: { has: user["sub-user"] } },
+      ],
+    },
+    select: fields,
   });
 }
 
@@ -63,10 +81,10 @@ export async function createLaboratory({
   password: string;
   name: string;
   phone: string;
-  address?: string;
-  publicPhone?: string;
+  address: string;
+  publicPhone: string;
   web?: string;
-  publicEmail?: string;
+  publicEmail: string;
   img: string;
 }) {
   const hash = await hashPassword(password);
@@ -95,7 +113,10 @@ export async function createLaboratory({
         img: true,
       },
     });
-    return { access_token: signJWT({ "sub-lab": lab.id }), lab };
+    return {
+      access_token: signJWT({ "sub-lab": lab.id, sub: lab.email }),
+      lab,
+    };
   } catch (e) {
     /* !@unique */
     if (e.code === "P2002" && e.meta) {

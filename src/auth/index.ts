@@ -57,7 +57,7 @@ export const login = async (username: string, password: string) => {
   if (lab && (await verifyPassword(lab.hash, password)))
     payload["sub-lab"] = lab.id;
 
-  if (user && !lab && _isValidObjectID) {
+  if (user && !lab) {
     const labFromEmail = await prisma.lab.findUnique({
       where: { email: user.email },
       select: { id: true, hash: true },
@@ -75,6 +75,8 @@ export const login = async (username: string, password: string) => {
 
   if (!Object.keys(payload).length)
     return new ResponseError({ error: "Inválid auth", key: "auth" });
+
+  payload["sub"] = user?.email || lab?.email;
 
   return { access_token: signJWT(payload), payload };
 };

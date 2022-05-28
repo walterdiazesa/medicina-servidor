@@ -4,17 +4,68 @@ import { tests } from "../../mockdata.js";
 import { prisma } from "../handler.js";
 import { emit } from "../../socketio/index.js";
 import { DefaultSelectMany } from "../../types/select.js";
+import { Payload } from "../../types/Auth/index.js";
 
 export async function getTest(id: string) {
   // if (process.env.NODE_ENV.trim() === "DEV") return tests[0];
   return await prisma.test.findUnique({ where: { id } });
 }
 
-export async function getTests({ limit, order = "asc" }: DefaultSelectMany) {
+export async function getTestAccess(id: string, user: Payload) {
+  // if (process.env.NODE_ENV.trim() === "DEV") return tests[0];
+  return (
+    (await prisma.test.count({
+      where: {
+        id,
+        AND: [
+          {
+            OR: [
+              { labId: user["sub-lab"] },
+              {
+                lab: {
+                  OR: [
+                    { userIds: { has: user["sub-user"] } },
+                    { ownerIds: { has: user["sub-user"] } },
+                  ],
+                },
+              },
+            ],
+          },
+        ],
+      },
+    })) !== 0
+  );
+}
+
+export async function getTests(
+  { limit, order = "asc" }: DefaultSelectMany,
+  user: Payload
+) {
   // if (process.env.NODE_ENV.trim() === "DEV") return tests;
+  // console.log({ user });
   return await prisma.test.findMany({
     take: limit,
     orderBy: { date: order },
+    where: {
+      OR: [
+        { labId: user["sub-lab"] },
+        {
+          ...(user["sub-user"] && {
+            lab: {
+              OR: [
+                { userIds: { has: user["sub-user"] } },
+                { ownerIds: { has: user["sub-user"] } },
+              ],
+            },
+          }),
+        },
+      ],
+    },
+    include: {
+      lab: {
+        select: { name: true },
+      },
+    },
   });
 }
 
@@ -25,7 +76,7 @@ export async function createTest(data: Test) {
       tests: data.tests,
     },
   });
-  emit("test_created", test);
+  emit({ event: "test_created", to: data.labId }, test);
   axios
     .get(`${process.env.APP_HOST}/api/revalidatetest`, {
       params: {

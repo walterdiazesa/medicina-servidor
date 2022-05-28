@@ -72,7 +72,10 @@ export async function createUser({
         profileImg: true,
       },
     });
-    return { access_token: signJWT({ "sub-user": user.id }), user };
+    return {
+      access_token: signJWT({ "sub-user": user.id, sub: user.email }),
+      user,
+    };
   } catch (e) {
     /* !@unique */
     if (e.code === "P2002" && e.meta) {
@@ -97,7 +100,10 @@ export async function createUser({
               profileImg: true,
             },
           });
-          return { access_token: signJWT({ "sub-user": user.id }), user };
+          return {
+            access_token: signJWT({ "sub-user": user.id, sub: user.email }),
+            user,
+          };
         } catch (eIn) {
           console.error(eIn);
         }

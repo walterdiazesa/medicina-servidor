@@ -4,11 +4,15 @@ import {
   getLaboratories,
   createLaboratory,
 } from "../../db/Lab/index.js";
+import { AuthRequest } from "../../types/Express/index.js";
 import { ResponseError } from "../../types/Responses/error.js";
+import { authGuard } from "../middlewares/index.js";
 
 const router = Router();
 
-router.get("/", async (req, res) => res.send(await getLaboratories(req.query)));
+router.get("/", authGuard, async (req: AuthRequest, res) =>
+  res.send(await getLaboratories(req.query, req.user))
+);
 router.get("/:id", async (req, res) =>
   res.send(await getLaboratory(req.params.id))
 );

@@ -1,5 +1,5 @@
 import cluster from "cluster";
-import express from "express";
+import express, { Request, Response } from "express";
 import cors from "cors";
 import { cpus } from "os";
 import { Server as SocketIOServer } from "socket.io";
@@ -17,6 +17,9 @@ import { createAdapter } from "@socket.io/redis-adapter";
 import { createClient } from "redis";
 import { RedisClient, RedisSubClient } from "./redis/index.js";
 import { cookieParser } from "./routes/middlewares/index.js";
+import { verifyJWT } from "./auth/index.js";
+import { getLaboratories } from "./db/Lab/index.js";
+import { parseQueryBoolean } from "./routes/middlewares/index.js";
 
 const numCpus = cpus().length;
 
@@ -28,6 +31,10 @@ let _io: {
 export const getActiveIO = () => {
   return _io[0];
 };
+
+const corsWhiteList = [process.env.APP_HOST];
+if (process.env.NODE_ENV.trim() === "DEV")
+  corsWhiteList.push("http://localhost:3000");
 
 // && process.env.NODE_ENV.trim() !== "DEV"
 if (cluster.isPrimary) {
@@ -52,9 +59,30 @@ if (cluster.isPrimary) {
 
   // TO-DO: add specific cors, e.g GET: /test (cors("[next*]"), POST: /test (cors("*")))
   // Cors doc: https://stackabuse.com/handling-cors-with-node-js/
-  app.use(cors()); // Allow * origin
+  //#region CORS
+  const corsOptions = (req: Request, callback: any) => {
+    let corsOptions: cors.CorsOptions = { origin: false, credentials: true };
+    const isDomainAllowed = corsWhiteList.includes(req.headers.origin); // ["GET", "PUT"].includes(req.method) &&
+    const isOperationAllowed = (path: string, method: string) => {
+      if (!isDomainAllowed) {
+        if (path.includes("test") && ["GET", "PUT"].includes(method))
+          return false;
+        if (path.includes("auth")) return false;
+      }
+      return true;
+    };
+    if (isOperationAllowed(req.path, req.method)) {
+      corsOptions["origin"] = true;
+    }
+
+    callback(null, corsOptions);
+  };
+  //#endregion
+
+  app.use(cors(corsOptions)); // Allow * origin
   app.use(express.json());
   app.use(cookieParser);
+  app.use(parseQueryBoolean());
 
   app.get("/", (req, res) => res.send([{ cluster }, { cpus: cpus() }]));
 
@@ -88,4 +116,39 @@ if (cluster.isPrimary) {
     .catch((e) => console.log("Can't connect to the Redis PubSub Client"));
 
   _io.push({ cluster: cluster.worker!.id, io });
+  io.on("connection", (socket) => {
+    const headers = socket.request.headers;
+    if (headers.origin) {
+      if (!corsWhiteList.includes(headers.origin)) return socket.disconnect();
+      const cookies: { [key: string]: string } = {};
+      //#region parseCookies
+      if (headers.cookie) {
+        const cookieElements = headers.cookie.split(";");
+        cookieElements.forEach((cookieElement) => {
+          const [key, value] = cookieElement.split("=");
+          cookies[key.trim()] = value.trim();
+        });
+      }
+      //#endregion
+      if (!cookies["session"]) return socket.disconnect();
+      const user = verifyJWT(cookies["session"]);
+      if (!user) return socket.disconnect();
+
+      const userRooms: string[] = [];
+      if (user["sub-lab"]) userRooms.push(user["sub-lab"]);
+      if (user["sub-user"]) userRooms.push(user["sub-user"]);
+      getLaboratories({ fields: { id: true }, labFromUser: false }, user).then(
+        async (queryLabs) => {
+          for (const room of socket.rooms.values()) {
+            await socket.leave(room);
+          }
+          await socket.join([
+            ...userRooms,
+            ...queryLabs.map(({ id }: { id: string }) => id),
+          ]);
+          // console.log({ rooms: socket.rooms });
+        }
+      );
+    }
+  });
 }

@@ -93,7 +93,7 @@ if (cluster.isPrimary) {
   app.use("/auth", authRoutes);
 
   const server = app.listen(process.env.PORT || 8080, () =>
-    console.log("Medicina API running...")
+    console.log("Medicina API running...", process.env.PORT || 8080)
   );
   const io = new SocketIOServer(server, {
     cors: { origin: "*" },

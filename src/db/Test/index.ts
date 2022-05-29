@@ -24,8 +24,16 @@ export async function getTestAccess(id: string, user: Payload) {
               {
                 lab: {
                   OR: [
-                    { userIds: { has: user["sub-user"] } },
-                    { ownerIds: { has: user["sub-user"] } },
+                    {
+                      userIds: user["sub-user"]
+                        ? { has: user["sub-user"] }
+                        : undefined,
+                    },
+                    {
+                      ownerIds: user["sub-user"]
+                        ? { has: user["sub-user"] }
+                        : undefined,
+                    },
                   ],
                 },
               },

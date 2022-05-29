@@ -57,8 +57,8 @@ server.listen(PORT, function () {
   );
 });
 
-server.on("connection", async function (socket) {
-  socket.on("data", function (chunk: Buffer) {
+server.on("connection", function (socket) {
+  socket.on("data", async function (chunk: Buffer) {
     const chemData = chunk.toString();
     if (!isChem(chemData)) return;
     print(
@@ -107,7 +107,7 @@ server.on("connection", async function (socket) {
     } catch (e) {}
 
     try {
-      const { status, data } = axios.default.post(
+      const { status, data } = await axios.default.post(
         TEST_SUBMIT_HOST,
         { chemData, issuer, patient, listenerUsername },
         { headers: { authorization: license } }

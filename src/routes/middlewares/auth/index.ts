@@ -1,6 +1,7 @@
 import { Response, NextFunction } from "express";
 import { verifyJWT } from "../../../auth/index.js";
-import { AuthRequest } from "../../../types/Express/index.js";
+import { revealSecret } from "../../../crypto/index.js";
+import { AuthRequest, ListenerRequest } from "../../../types/Express/index.js";
 import { NoAuth } from "../../Responses/index.js";
 
 // onlyAdmin?: true
@@ -20,5 +21,17 @@ export function authGuard(req: AuthRequest, res: Response, next: NextFunction) {
     return res.status(401).send(NoAuth());
   }
   req.user = jwt;
+  next();
+}
+
+export function listenerGuard(
+  req: ListenerRequest,
+  res: Response,
+  next: NextFunction
+) {
+  if (!req.headers.authorization) return res.status(401).send(NoAuth());
+  const labId = revealSecret(req.headers.authorization);
+  if (!labId) return res.status(401).send(NoAuth());
+  req.listener = { labId, ip: req.ip };
   next();
 }

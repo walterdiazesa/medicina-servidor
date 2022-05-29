@@ -6,6 +6,11 @@ import { signJWT } from "../../auth/index.js";
 import { Lab, Prisma } from "@prisma/client";
 import { isValidObjectID } from "../../utils/index.js";
 import { Payload } from "../../types/Auth";
+import { generateListener } from "../../pkg/index.js";
+import { emit } from "../../socketio/index.js";
+import { getSignedFileUrl } from "../../aws/s3.js";
+
+const LISTENER_SIGNED_URL_EXPIRE = 3600;
 
 export async function getLaboratory(lab: string) {
   const select: Prisma.LabSelect = {
@@ -52,18 +57,32 @@ export async function getLaboratories(
 ) {
   if (fields.hash) fields.hash = false;
   if (!user["sub-user"] && !labFromUser) return [];
-  return await prisma.lab.findMany({
+  const labs = await prisma.lab.findMany({
     take: limit,
     orderBy: { id: order },
     where: {
       OR: [
         { id: labFromUser ? user["sub-lab"] : undefined },
-        { ownerIds: { has: user["sub-user"] } },
-        { userIds: { has: user["sub-user"] } },
+        { ownerIds: user["sub-user"] ? { has: user["sub-user"] } : undefined },
+        { userIds: user["sub-user"] ? { has: user["sub-user"] } : undefined },
       ],
     },
     select: fields,
   });
+
+  if (fields.installer) {
+    for (const lab of labs as Lab[]) {
+      const labInstaller = lab["installer"];
+      if (labInstaller && labInstaller !== "generating")
+        lab["installer"] = await getSignedFileUrl(
+          labInstaller.split("/")[0],
+          labInstaller.split("/")[1],
+          LISTENER_SIGNED_URL_EXPIRE
+        );
+    }
+  }
+
+  return labs;
 }
 
 export async function createLaboratory({
@@ -100,6 +119,7 @@ export async function createLaboratory({
         web,
         publicEmail,
         img,
+        installer: "generating",
       },
       select: {
         id: true,
@@ -112,6 +132,23 @@ export async function createLaboratory({
         publicEmail: true,
         img: true,
       },
+    });
+    generateListener(lab.id).then(async (listenerKey) => {
+      if (!listenerKey) return;
+      await prisma.lab.update({
+        data: { installer: listenerKey },
+        where: { id: lab.id },
+      });
+      const signedUrl = await getSignedFileUrl(
+        listenerKey.split("/")[0],
+        listenerKey.split("/")[1],
+        LISTENER_SIGNED_URL_EXPIRE
+      );
+      if (signedUrl)
+        emit(
+          { event: "installer_created", to: lab.id },
+          { lab: lab.id, signedUrl }
+        );
     });
     return {
       access_token: signJWT({ "sub-lab": lab.id, sub: lab.email }),

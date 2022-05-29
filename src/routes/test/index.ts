@@ -5,8 +5,8 @@ import {
   getTest,
   getTestAccess,
 } from "../../db/Test/index.js";
-import { AuthRequest } from "../../types/Express/index.js";
-import { authGuard } from "../middlewares/index.js";
+import { AuthRequest, ListenerRequest } from "../../types/Express/index.js";
+import { authGuard, listenerGuard } from "../middlewares/index.js";
 
 const router = Router();
 
@@ -17,8 +17,13 @@ router.get("/:id", async (req, res) => res.send(await getTest(req.params.id)));
 router.get("/:id/access", authGuard, async (req: AuthRequest, res) =>
   res.send(await getTestAccess(req.params.id, req.user))
 );
-router.post("/", async (req, res) =>
-  res.send(await createTest({ ...req.body, date: new Date() }))
+router.post("/", listenerGuard, async (req: ListenerRequest, res) =>
+  res.send(
+    await createTest(
+      { ...req.body, date: new Date(), labId: req.listener.labId },
+      req.listener
+    )
+  )
 );
 
 export default router;

@@ -4,7 +4,7 @@ import { tests } from "../../mockdata.js";
 import { prisma } from "../handler.js";
 import { emit } from "../../socketio/index.js";
 import { DefaultSelectMany } from "../../types/select.js";
-import { Payload } from "../../types/Auth/index.js";
+import { ListenerPayload, Payload } from "../../types/Auth/index.js";
 
 export async function getTest(id: string) {
   // if (process.env.NODE_ENV.trim() === "DEV") return tests[0];
@@ -69,13 +69,22 @@ export async function getTests(
   });
 }
 
-export async function createTest(data: Test) {
+export async function createTest(data: Test, listener: ListenerPayload) {
   const test = await prisma.test.create({
-    data: {
+    data,
+  });
+  prisma.listenerRequest
+    .create({
+      data: {
+        testId: test.id,
+        ip: listener.ip,
+      },
+    })
+    .then(() => {});
+  /* : {
       ...data,
       tests: data.tests,
-    },
-  });
+    } */
   emit({ event: "test_created", to: data.labId }, test);
   axios
     .get(`${process.env.APP_HOST}/api/revalidatetest`, {

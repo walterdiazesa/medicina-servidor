@@ -10,3 +10,5 @@ export type Payload = {
   | { "sub-lab": string }
   | { "sub-user": string }
 );
+
+export type ListenerPayload = { labId: string; ip: string };

@@ -19,6 +19,14 @@ model Test {
   date   DateTime
   labId String    @db.ObjectId
   patientId String?    @db.ObjectId
+  listenerRequest  ListenerRequest?
+}
+
+model ListenerRequest {
+  id       String    @id @default(auto()) @map("_id") @db.ObjectId
+  test      Test      @relation(fields: [testId], references: [id])
+  ip  String
+  testId String    @db.ObjectId
 }
 
 model Patient {
@@ -42,6 +50,7 @@ model Lab {
   publicEmail String
   img   String
   installer String?
+  createdAt DateTime @default(now())
   userIds String[]   @db.ObjectId
   ownerIds String[]   @db.ObjectId
   Test  Test[]
@@ -56,6 +65,7 @@ model User {
   name String
   hash String
   profileImg String?
+  createdAt DateTime @default(now())
   labIds String[] @db.ObjectId
   Lab Lab[] @relation(fields: [labIds], references: [id])
   ownerIds String[] @db.ObjectId

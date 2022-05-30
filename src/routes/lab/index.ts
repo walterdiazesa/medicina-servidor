@@ -19,7 +19,11 @@ router.get("/:id", async (req, res) =>
 router.post("/", async (req, res) => {
   const lab = await createLaboratory(req.body);
   if (lab instanceof ResponseError) return res.status(400).send(lab);
-  res.cookie("session", lab["access_token"], { httpOnly: true });
+  res.cookie("session", lab["access_token"], {
+    httpOnly: true,
+    secure: process.env.NODE_ENV.trim() === "PROD",
+    sameSite: process.env.NODE_ENV.trim() === "PROD" ? "none" : undefined,
+  });
   return res.status(201).send(lab["lab"]);
 });
 

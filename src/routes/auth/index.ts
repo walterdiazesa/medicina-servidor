@@ -16,7 +16,7 @@ router.post("/login", async (req, res) => {
   res.cookie("session", auth["access_token"], {
     httpOnly: true,
     secure: process.env.NODE_ENV.trim() === "PROD",
-    sameSite: "none",
+    sameSite: process.env.NODE_ENV.trim() === "PROD" ? "none" : undefined,
   });
   return res.status(200).send(auth["payload"]);
   /* {
@@ -31,7 +31,8 @@ router.post("/logout", async (req, res) => {
   res.cookie("session", "", {
     httpOnly: true,
     secure: process.env.NODE_ENV.trim() === "PROD",
-    sameSite: "none",
+    sameSite: process.env.NODE_ENV.trim() === "PROD" ? "none" : undefined,
+    expires: new Date(0),
   });
   return res.status(200).send();
 });

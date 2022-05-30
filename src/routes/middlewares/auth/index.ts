@@ -17,6 +17,7 @@ export function authGuard(req: AuthRequest, res: Response, next: NextFunction) {
         expires: new Date(0),
         httpOnly: true,
         secure: process.env.NODE_ENV.trim() === "PROD",
+        sameSite: process.env.NODE_ENV.trim() === "PROD" ? "none" : undefined,
       });
     return res.status(401).send(NoAuth());
   }

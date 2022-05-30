@@ -14,7 +14,11 @@ router.get("/:id", async (req, res) => res.send(await getUser(req.params.id)));
 router.post("/", async (req, res) => {
   const user = await createUser(req.body);
   if (user instanceof ResponseError) return res.status(400).send(user);
-  res.cookie("session", user["access_token"], { httpOnly: true });
+  res.cookie("session", user["access_token"], {
+    httpOnly: true,
+    secure: process.env.NODE_ENV.trim() === "PROD",
+    sameSite: process.env.NODE_ENV.trim() === "PROD" ? "none" : undefined,
+  });
   return res.status(201).send(user["user"]);
 });
 

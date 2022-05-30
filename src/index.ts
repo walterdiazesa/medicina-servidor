@@ -84,7 +84,9 @@ if (cluster.isPrimary) {
   app.use(cookieParser);
   app.use(parseQueryBoolean());
 
-  app.get("/", (req, res) => res.send([{ cluster }, { cpus: cpus() }]));
+  app.get("/", (req, res) =>
+    res.status(200).send([{ cluster }, { cpus: cpus() }])
+  );
 
   //app.get("/test", (req, res) => res.send([{ cluster }, { cpus: cpus() }]));
   app.use("/test", testRoutes);

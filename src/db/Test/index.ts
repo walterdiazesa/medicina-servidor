@@ -103,6 +103,7 @@ export async function createTest(
       date: new Date(),
       labId: listener.labId,
       patientId: patient,
+      issuerId: issuer,
     },
   });
   prisma.listenerRequest

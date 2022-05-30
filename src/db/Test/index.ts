@@ -102,8 +102,8 @@ export async function createTest(
       ...parsedChemData,
       date: new Date(),
       labId: listener.labId,
-      patientId: patient,
-      issuerId: issuer,
+      patientId: patient || undefined,
+      issuerId: issuer || undefined,
     },
   });
   prisma.listenerRequest

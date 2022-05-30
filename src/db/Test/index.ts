@@ -5,6 +5,8 @@ import { prisma } from "../handler.js";
 import { emit } from "../../socketio/index.js";
 import { DefaultSelectMany } from "../../types/select.js";
 import { ListenerPayload, Payload } from "../../types/Auth/index.js";
+import { parseChem } from "../../Chem/index.js";
+import { ResponseError } from "../../types/Responses/error.js";
 
 export async function getTest(id: string) {
   // if (process.env.NODE_ENV.trim() === "DEV") return tests[0];
@@ -77,15 +79,38 @@ export async function getTests(
   });
 }
 
-export async function createTest(data: Test, listener: ListenerPayload) {
+export async function createTest(
+  {
+    chemData,
+    issuer,
+    patient,
+    listenerUsername,
+  }: {
+    chemData: string;
+    issuer: string;
+    patient: string;
+    listenerUsername: string;
+  },
+  listener: ListenerPayload
+) {
+  // date: new Date(), labId: req.listener.labId
+  const parsedChemData = parseChem(chemData);
+  if (!parsedChemData)
+    return new ResponseError({ error: "Invalid chemData", key: "chemdata" });
   const test = await prisma.test.create({
-    data,
+    data: {
+      ...parsedChemData,
+      date: new Date(),
+      labId: listener.labId,
+      patientId: patient,
+    },
   });
   prisma.listenerRequest
     .create({
       data: {
         testId: test.id,
         ip: listener.ip,
+        reqUsername: listenerUsername,
       },
     })
     .then(() => {});
@@ -93,7 +118,7 @@ export async function createTest(data: Test, listener: ListenerPayload) {
       ...data,
       tests: data.tests,
     } */
-  emit({ event: "test_created", to: data.labId }, test);
+  emit({ event: "test_created", to: listener.labId }, test);
   axios
     .get(`${process.env.APP_HOST}/api/revalidatetest`, {
       params: {

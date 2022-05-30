@@ -59,8 +59,9 @@ server.listen(PORT, function () {
 
 server.on("connection", function (socket) {
   socket.on("data", async function (chunk: Buffer) {
+    socket.pause();
     const chemData = chunk.toString();
-    if (!isChem(chemData)) return;
+    if (!isChem(chemData)) return socket.resume();
     print(
       `${colorKey("purple")}Posible test entrante, ¿Desea continuar? ${colorKey(
         "white"
@@ -74,16 +75,17 @@ server.on("connection", function (socket) {
       isExpectedChem.toLowerCase() !== "s" &&
       isExpectedChem.toLowerCase() !== "si"
     )
-      return print(
-        `${colorKey(
-          "yellow"
-        )}Procedimiento cancelado por acción humana, escuchando nuevas peticiones...`
+      return (
+        socket.resume(),
+        print(
+          `${colorKey(
+            "yellow"
+          )}Procedimiento cancelado por acción humana, escuchando nuevas peticiones...`
+        )
       );
     // if (isExpectedChem)
     // TO-DO: /getUsersFromLab(orLab) with listenerGuard middleware, while(isnt valid and confirm) { ask() }
     // TO-DO: for patient also
-    // TO-DO: change POST /test, accept new body format instead of body(testData)
-    // TO-DO: add on POST /test chemIdentifier and chemParser
     print(
       `${colorKey(
         "blue"
@@ -124,6 +126,7 @@ server.on("connection", function (socket) {
       print(`${colorKey("red")}${JSON.stringify(e)}`);
     }
     print("Escuchando nuevas peticiones...");
+    socket.resume();
   });
 
   // End Cases

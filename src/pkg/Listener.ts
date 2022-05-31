@@ -1,5 +1,3 @@
-// @ts-nocheck
-
 const { createInterface } = require("readline");
 const axios = require("axios");
 const net = require("net");
@@ -7,9 +5,19 @@ const ip = require("ip");
 const { userInfo } = require("os");
 
 const license = "%LICENSE%";
-const PORT = 8080;
-const TEST_SUBMIT_HOST =
-  "https://medicina-servidor-tu6et.ondigitalocean.app/test";
+const ENV = "%ENV%";
+// @ts-ignore
+const PORT = ENV === "DEV" ? 8079 : 8080;
+const SERVIDOR_HOST =
+  // @ts-ignore
+  ENV === "DEV"
+    ? "http://localhost:8080"
+    : "https://medicina-servidor-tu6et.ondigitalocean.app";
+
+type Employee = { id: string; email: string; name: string };
+interface Employees extends Employee {
+  idx: number;
+}
 
 //#region consoleInput
 function consoleInput(query: string) {
@@ -57,7 +65,7 @@ server.listen(PORT, function () {
   );
 });
 
-server.on("connection", function (socket) {
+server.on("connection", function (socket: any) {
   socket.on("data", async function (chunk: Buffer) {
     socket.pause();
     const chemData = chunk.toString();
@@ -68,12 +76,16 @@ server.on("connection", function (socket) {
       )}(s/n)`
     );
     const isExpectedChem = await consoleInput(
-      `Escribe "s" o "n" y presiona la tecla [Enter]: `
+      `Escribe ${colorKey("blue")}"s"${colorKey("white")} o ${colorKey(
+        "blue"
+      )}"n"${colorKey("white")} y presiona la tecla ${colorKey(
+        "yellow"
+      )}[Enter]${colorKey("white")}: `
     );
     // if (!isExpectedChem)
     if (
-      isExpectedChem.toLowerCase() !== "s" &&
-      isExpectedChem.toLowerCase() !== "si"
+      isExpectedChem.trim().toLowerCase() !== "s" &&
+      isExpectedChem.trim().toLowerCase() !== "si"
     )
       return (
         socket.resume(),
@@ -86,14 +98,158 @@ server.on("connection", function (socket) {
     // if (isExpectedChem)
     // TO-DO: /getUsersFromLab(orLab) with listenerGuard middleware, while(isnt valid and confirm) { ask() }
     // TO-DO: for patient also
-    print(
-      `${colorKey(
-        "blue"
-      )}Escribe tu identificador y presiona la tecla ${colorKey(
-        "yellow"
-      )}[Enter]:`
-    );
-    let issuer = await consoleInput("");
+    let issuer = undefined;
+    while (issuer === undefined) {
+      print(
+        `${colorKey(
+          "blue"
+        )}Escribe tu identificador (id, slug, correo o nombre) o déjalo vacío para usar el del laboratorio y presiona la tecla ${colorKey(
+          "yellow"
+        )}[Enter]:`
+      );
+      let _issuer = await consoleInput("");
+      if (_issuer.trim() === "") {
+        issuer = "";
+        break;
+      }
+      try {
+        const { data }: { data: Employee | Employees[] } =
+          await axios.default.get(
+            `${SERVIDOR_HOST}/users/listener/${_issuer}`,
+            { headers: { authorization: license } }
+          );
+        if (Array.isArray(data)) {
+          // start: Case many users retrieved (found by name)
+          for (const employee of data as Employees[]) {
+            print(
+              `${colorKey("yellow")}${employee.idx}- ${colorKey("white")}${
+                employee.email
+              }${colorKey("yellow")},${colorKey("white")} ${employee.name}`
+            );
+          }
+          let selectedEmployee = undefined;
+          // start: user is in list
+          while (selectedEmployee === undefined) {
+            const isExpectedEmployeeFromList = await consoleInput(
+              `${colorKey(
+                "blue"
+              )}Si alguno de los usuarios de la lista es el esperado, escriba el número correspondiente y después la tecla ${colorKey(
+                "yellow"
+              )}[Enter]${colorKey("blue")}, ${colorKey(
+                "purple"
+              )}si no${colorKey(
+                "blue"
+              )}, únicamente presione la tecla ${colorKey(
+                "yellow"
+              )}[Enter]${colorKey("white")}: `
+            );
+            if (
+              isExpectedEmployeeFromList.trim() === "" ||
+              isNaN(parseInt(isExpectedEmployeeFromList))
+            )
+              break;
+            const employeeIdx = parseInt(isExpectedEmployeeFromList);
+            if (employeeIdx <= (data as Employees[]).length) {
+              print(
+                `${colorKey(
+                  "white"
+                )}¿Usted quiere seleccionar al usuario "${colorKey("yellow")}${
+                  (data as Employees[])[employeeIdx - 1].name
+                }${colorKey("white")}", con correo "${colorKey("yellow")}${
+                  (data as Employees[])[employeeIdx - 1].email
+                }${colorKey("white")}"?`
+              );
+              if (
+                (
+                  await consoleInput(
+                    `${colorKey(
+                      "blue"
+                    )}Si el usuario anterior es el esperado escriba "${colorKey(
+                      "green"
+                    )}s${colorKey("blue")}" y después la tecla ${colorKey(
+                      "yellow"
+                    )}[Enter]${colorKey("blue")}, ${colorKey(
+                      "purple"
+                    )}si no${colorKey(
+                      "blue"
+                    )}, presione únicamente la tecla ${colorKey(
+                      "yellow"
+                    )}[Enter]${colorKey("white")}: `
+                  )
+                )
+                  .trim()
+                  .toLowerCase() === "s"
+              ) {
+                selectedEmployee = (data as Employees[])[employeeIdx - 1].id;
+              }
+            } else {
+              print(
+                `${colorKey("purple")}El índice ${colorKey(
+                  "red"
+                )}${employeeIdx}${colorKey(
+                  "purple"
+                )} excede los usuarios obtenidos con la búsqueda actual.`
+              );
+            }
+          }
+          // end: user is in list
+          if (selectedEmployee) issuer = selectedEmployee;
+          // end: Case many users retrieved (found by name)
+        } else {
+          // start: Case unique user retrieve (found by id, email or slug)
+          print(
+            `${colorKey(
+              "white"
+            )}¿Usted quiere seleccionar al usuario "${colorKey("yellow")}${
+              (data as Employee).name
+            }${colorKey("white")}", con correo "${colorKey("yellow")}${
+              (data as Employee).email
+            }${colorKey("white")}"?`
+          );
+          if (
+            (
+              await consoleInput(
+                `${colorKey(
+                  "blue"
+                )}Si el usuario anterior es el esperado escriba "${colorKey(
+                  "green"
+                )}s${colorKey("blue")}" y después la tecla ${colorKey(
+                  "yellow"
+                )}[Enter]${colorKey("blue")}, ${colorKey(
+                  "purple"
+                )}si no${colorKey(
+                  "blue"
+                )}, presione únicamente la tecla ${colorKey(
+                  "yellow"
+                )}[Enter]${colorKey("white")}: `
+              )
+            )
+              .trim()
+              .toLowerCase() === "s"
+          ) {
+            issuer = (data as Employee).id;
+          }
+          // end: Case unique user retrieve (found by id, email or slug)
+        }
+      } catch (e) {
+        // start: In case no user/s retrieved
+        if (e.response.status === 404) {
+          print(
+            `${colorKey("purple")}El usuario con identificador ${colorKey(
+              "red"
+            )}${_issuer}${colorKey("purple")} no pudo ser encontrado.`
+          );
+        } else {
+          print(
+            `${colorKey(
+              "red"
+            )}Ha ocurrido un error al obtener el/los usuarios del laboratorio...`
+          );
+          print(`${colorKey("red")}${JSON.stringify(e)}`);
+        }
+        // end: In case no user/s retrieved
+      }
+    }
     print(
       `${colorKey(
         "blue"
@@ -110,7 +266,7 @@ server.on("connection", function (socket) {
 
     try {
       const { status, data } = await axios.default.post(
-        TEST_SUBMIT_HOST,
+        `${SERVIDOR_HOST}/test`,
         { chemData, issuer, patient, listenerUsername },
         { headers: { authorization: license } }
       );
@@ -133,7 +289,7 @@ server.on("connection", function (socket) {
   socket.on("end", function () {
     // console.log("\x1b[31mCerrando conexión con el cliente");
   });
-  socket.on("error", function (err) {
+  socket.on("error", function (err: any) {
     // console.log(`\x1b[31mError: ${JSON.stringify(err)}`);
   });
 });

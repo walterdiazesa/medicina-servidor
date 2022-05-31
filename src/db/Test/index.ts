@@ -7,6 +7,7 @@ import { DefaultSelectMany } from "../../types/select.js";
 import { ListenerPayload, Payload } from "../../types/Auth/index.js";
 import { parseChem } from "../../Chem/index.js";
 import { ResponseError } from "../../types/Responses/error.js";
+import { isValidObjectID } from "../../utils/index.js";
 
 export async function getTest(id: string) {
   // if (process.env.NODE_ENV.trim() === "DEV") return tests[0];
@@ -93,17 +94,18 @@ export async function createTest(
   },
   listener: ListenerPayload
 ) {
-  // date: new Date(), labId: req.listener.labId
+  // return console.log({ arguments }, { listener });
   const parsedChemData = parseChem(chemData);
   if (!parsedChemData)
     return new ResponseError({ error: "Invalid chemData", key: "chemdata" });
+
   const test = await prisma.test.create({
     data: {
       ...parsedChemData,
       date: new Date(),
       labId: listener.labId,
-      patientId: patient || undefined,
-      issuerId: issuer || undefined,
+      patientId: isValidObjectID(patient) ? patient : undefined,
+      issuerId: isValidObjectID(issuer) ? issuer : undefined,
     },
   });
   prisma.listenerRequest

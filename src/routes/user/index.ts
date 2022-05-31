@@ -1,12 +1,26 @@
 import { Router } from "express";
-import { getUser, getUsers, createUser } from "../../db/User/index.js";
-import { AuthRequest } from "../../types/Express/index.js";
+import {
+  getUser,
+  getUsers,
+  createUser,
+  getEmployee,
+} from "../../db/User/index.js";
+import { AuthRequest, ListenerRequest } from "../../types/Express/index.js";
 import { ResponseError } from "../../types/Responses/error.js";
-import { authGuard } from "../middlewares/index.js";
+import { authGuard, listenerGuard } from "../middlewares/index.js";
 
 const router = Router();
 
 router.get("/", async (req, res) => res.send(await getUsers(req.query)));
+router.get(
+  "/listener/:employee",
+  listenerGuard,
+  async (req: ListenerRequest, res) => {
+    const employee = await getEmployee(req.listener.labId, req.params.employee);
+    if (!employee) res.status(404);
+    res.send(employee);
+  }
+);
 router.get("/me", authGuard, async (req: AuthRequest, res) =>
   res.send(await getUser(req.user["sub-user"]))
 );

@@ -26,7 +26,9 @@ const getListenerName = (labId: string = "", ext: "exe" | "js" = "js") =>
 
 const generateListenerFile = (labId: string, licenseHash: string) => {
   const data = fs.readFileSync(getListenerName(), "utf-8");
-  const dataWithLicenseHash = data.replace("%LICENSE%", licenseHash);
+  let dataWithLicenseHash = data.replace("%LICENSE%", licenseHash);
+  if (process.env.NODE_ENV.trim() === "DEV")
+    dataWithLicenseHash = dataWithLicenseHash.replace("%ENV%", "DEV");
   fs.writeFileSync(getListenerName(labId), dataWithLicenseHash, "utf-8");
 };
 

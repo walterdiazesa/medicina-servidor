@@ -23,6 +23,51 @@ export async function getUser(user: string) {
       });
 }
 
+export async function getEmployee(labId: string, user: string) {
+  if (!user) return null;
+  const select: Prisma.UserSelect = {
+    id: true,
+    email: true,
+    name: true,
+  };
+  if (isValidObjectID(user)) {
+    const employee = await prisma.user.findUnique({
+      where: { id: user },
+      select: { ...select, labIds: true, ownerIds: true },
+    });
+    return employee &&
+      ((employee as User).labIds.includes(labId) ||
+        (employee as User).ownerIds.includes(labId))
+      ? delete employee.labIds && delete employee.ownerIds && employee
+      : null;
+  }
+
+  const employee = await prisma.user.findFirst({
+    where: {
+      AND: [
+        { OR: [{ email: user }, { slug: user }] },
+        { OR: [{ labIds: { has: labId } }, { ownerIds: { has: labId } }] },
+      ],
+    },
+    select,
+  });
+  if (employee) return employee;
+  const employees = await prisma.user.findMany({
+    where: {
+      AND: [
+        { name: { contains: user } },
+        { OR: [{ labIds: { has: labId } }, { ownerIds: { has: labId } }] },
+      ],
+    },
+    orderBy: { name: "asc" },
+    select,
+  });
+  for (let i = 0; i < employees.length; i++) {
+    (employees[i] as any).idx = i + 1;
+  }
+  return !employees.length ? null : employees;
+}
+
 export async function getUsers({
   limit,
   order = "asc",

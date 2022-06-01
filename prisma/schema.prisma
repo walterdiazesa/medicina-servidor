@@ -35,6 +35,8 @@ model ListenerRequest {
 model Patient {
   id    String  @id @default(auto()) @map("_id") @db.ObjectId
   email String  @unique
+  dui String @unique
+  phone String @unique
   name  String
   sex   String
   dateBorn DateTime

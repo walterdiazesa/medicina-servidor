@@ -10,6 +10,7 @@ import {
   userRoutes,
   labRoutes,
   authRoutes,
+  patientRoutes,
 } from "./routes/index.js";
 import { DefaultEventsMap } from "socket.io/dist/typed-events";
 
@@ -89,6 +90,7 @@ if (cluster.isPrimary) {
   //app.get("/test", (req, res) => res.send([{ cluster }, { cpus: cpus() }]));
   app.use("/test", testRoutes);
   app.use("/users", userRoutes);
+  app.use("/patients", patientRoutes);
   app.use("/labs", labRoutes);
   app.use("/auth", authRoutes);
 

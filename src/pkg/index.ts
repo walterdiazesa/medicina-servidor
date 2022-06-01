@@ -58,13 +58,5 @@ export const generateListener = async (labId: string) => {
   );
   removeListenerFile(labId);
   removeListenerFile(labId, "exe");
-  if (isListenerUploader) {
-    return `${LISTENER_BUCKET}/${listenerS3Key}`;
-    /* const listenerDownloadUrl = await getSignedFileUrl(
-      LISTENER_BUCKET,
-      listenerS3Key,
-      3600
-    );
-    if (listenerDownloadUrl) return listenerDownloadUrl; */
-  }
+  if (isListenerUploader) return `${LISTENER_BUCKET}/${listenerS3Key}`;
 };

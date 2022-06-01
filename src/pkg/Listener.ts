@@ -14,11 +14,41 @@ const SERVIDOR_HOST =
     ? "http://localhost:8080"
     : "https://medicina-servidor-tu6et.ondigitalocean.app";
 
-type Employee = { id: string; email: string; name: string };
-interface Employees extends Employee {
-  idx: number;
+type User = { id: string; email: string; name: string };
+interface Employee extends User {}
+interface Patient extends User {
+  dui: string;
+  phone: string;
+  sex: string;
+  dateBorn: string;
 }
 
+function formatDate(date: Date) {
+  const dateSplit = date
+    .toLocaleDateString("es-SV", {
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
+    })
+    .split(" ");
+  const month: { [month: string]: string } = {
+    January: "enero",
+    February: "febrero",
+    March: "marzo",
+    April: "abril",
+    May: "mayo",
+    June: "junio",
+    July: "julio",
+    August: "agosto",
+    September: "septiembre",
+    October: "octubre",
+    November: "noviembre",
+    December: "diciembre",
+  };
+  return `${dateSplit[1].replace(",", "")} de ${month[dateSplit[0]]} de ${
+    dateSplit[2]
+  }`;
+}
 //#region consoleInput
 function consoleInput(query: string) {
   const rl = createInterface({
@@ -113,16 +143,16 @@ server.on("connection", function (socket: any) {
         break;
       }
       try {
-        const { data }: { data: Employee | Employees[] } =
+        const { data }: { data: Employee | Employee[] } =
           await axios.default.get(
             `${SERVIDOR_HOST}/users/listener/${_issuer}`,
             { headers: { authorization: license } }
           );
         if (Array.isArray(data)) {
           // start: Case many users retrieved (found by name)
-          for (const employee of data as Employees[]) {
+          for (const [idx, employee] of (data as Employee[]).entries()) {
             print(
-              `${colorKey("yellow")}${employee.idx}- ${colorKey("white")}${
+              `${colorKey("yellow")}${idx + 1}- ${colorKey("white")}${
                 employee.email
               }${colorKey("yellow")},${colorKey("white")} ${employee.name}`
             );
@@ -149,14 +179,14 @@ server.on("connection", function (socket: any) {
             )
               break;
             const employeeIdx = parseInt(isExpectedEmployeeFromList);
-            if (employeeIdx <= (data as Employees[]).length) {
+            if (employeeIdx && employeeIdx <= (data as Employee[]).length) {
               print(
                 `${colorKey(
                   "white"
                 )}¿Usted quiere seleccionar al usuario "${colorKey("yellow")}${
-                  (data as Employees[])[employeeIdx - 1].name
+                  (data as Employee[])[employeeIdx - 1].name
                 }${colorKey("white")}", con correo "${colorKey("yellow")}${
-                  (data as Employees[])[employeeIdx - 1].email
+                  (data as Employee[])[employeeIdx - 1].email
                 }${colorKey("white")}"?`
               );
               if (
@@ -180,7 +210,7 @@ server.on("connection", function (socket: any) {
                   .trim()
                   .toLowerCase() === "s"
               ) {
-                selectedEmployee = (data as Employees[])[employeeIdx - 1].id;
+                selectedEmployee = (data as Employee[])[employeeIdx - 1].id;
               }
             } else {
               print(
@@ -250,14 +280,172 @@ server.on("connection", function (socket: any) {
         // end: In case no user/s retrieved
       }
     }
-    print(
-      `${colorKey(
-        "blue"
-      )}Escribe el identificador del paciente y presiona la tecla ${colorKey(
-        "yellow"
-      )}[Enter]:`
-    );
-    let patient = await consoleInput("");
+
+    let patient = undefined;
+    while (patient === undefined) {
+      print(
+        `${colorKey(
+          "blue"
+        )}Escribe el identificador del paciente (nombre, correo, teléfono o identificación) o déjalo vacío para crear un test sin paciente y presiona la tecla ${colorKey(
+          "yellow"
+        )}[Enter]:`
+      );
+      let _patient = await consoleInput("");
+      if (_patient.trim() === "") {
+        patient = "";
+        break;
+      }
+      try {
+        const { data }: { data: Patient | Patient[] } = await axios.default.get(
+          `${SERVIDOR_HOST}/patients/listener/${_patient}`,
+          { headers: { authorization: license } }
+        );
+        if (Array.isArray(data)) {
+          // start: Case many patient retrieved (found by name)
+          for (const [idx, patient] of (data as Patient[]).entries()) {
+            print(
+              `${colorKey("yellow")}${idx + 1}- ${colorKey("white")}${
+                patient.name
+              }${colorKey("yellow")}, ${colorKey("white")}${
+                patient.dui
+              }${colorKey("yellow")}, ${colorKey(
+                patient.sex === "Masculino"
+                  ? "blue"
+                  : patient.sex === "Femenino"
+                  ? "purple"
+                  : "white"
+              )}${patient.sex}${colorKey("yellow")}, ${colorKey("white")}${
+                patient.phone
+              }${colorKey("yellow")}, ${colorKey("white")}${formatDate(
+                new Date(patient.dateBorn)
+              )}${colorKey("yellow")}, ${colorKey("white")}${patient.email}`
+            );
+          }
+          let selectedPatient = undefined;
+          // start: patient is in list
+          while (selectedPatient === undefined) {
+            const isExpectedPatientFromList = await consoleInput(
+              `${colorKey(
+                "blue"
+              )}Si alguno de los pacientes de la lista es el esperado, escriba el número correspondiente y después la tecla ${colorKey(
+                "yellow"
+              )}[Enter]${colorKey("blue")}, ${colorKey(
+                "purple"
+              )}si no${colorKey(
+                "blue"
+              )}, únicamente presione la tecla ${colorKey(
+                "yellow"
+              )}[Enter]${colorKey("white")}: `
+            );
+            if (
+              isExpectedPatientFromList.trim() === "" ||
+              isNaN(parseInt(isExpectedPatientFromList))
+            )
+              break;
+            const patientIdx = parseInt(isExpectedPatientFromList);
+            if (patientIdx && patientIdx <= (data as Patient[]).length) {
+              print(
+                `${colorKey(
+                  "white"
+                )}¿Usted quiere seleccionar al paciente "${colorKey("yellow")}${
+                  (data as Patient[])[patientIdx - 1].name
+                }${colorKey("white")}", con identificación "${colorKey(
+                  "yellow"
+                )}${(data as Patient[])[patientIdx - 1].dui}${colorKey(
+                  "white"
+                )}"?`
+              );
+              if (
+                (
+                  await consoleInput(
+                    `${colorKey(
+                      "blue"
+                    )}Si el paciente anterior es el esperado escriba "${colorKey(
+                      "green"
+                    )}s${colorKey("blue")}" y después la tecla ${colorKey(
+                      "yellow"
+                    )}[Enter]${colorKey("blue")}, ${colorKey(
+                      "purple"
+                    )}si no${colorKey(
+                      "blue"
+                    )}, presione únicamente la tecla ${colorKey(
+                      "yellow"
+                    )}[Enter]${colorKey("white")}: `
+                  )
+                )
+                  .trim()
+                  .toLowerCase() === "s"
+              ) {
+                selectedPatient = (data as Patient[])[patientIdx - 1].id;
+              }
+            } else {
+              print(
+                `${colorKey("purple")}El índice ${colorKey(
+                  "red"
+                )}${patientIdx}${colorKey(
+                  "purple"
+                )} excede los pacientes obtenidos con la búsqueda actual.`
+              );
+            }
+          }
+          // end: patient is in list
+          if (selectedPatient) patient = selectedPatient;
+          // end: Case many users retrieved (found by name)
+        } else {
+          // start: Case unique patient retrieve (found by id, email, phone or dui)
+          print(
+            `${colorKey(
+              "white"
+            )}¿Usted quiere seleccionar al paciente "${colorKey("yellow")}${
+              (data as Patient).name
+            }${colorKey("white")}", con identificación "${colorKey("yellow")}${
+              (data as Patient).dui
+            }${colorKey("white")}"?`
+          );
+          if (
+            (
+              await consoleInput(
+                `${colorKey(
+                  "blue"
+                )}Si el paciente anterior es el esperado escriba "${colorKey(
+                  "green"
+                )}s${colorKey("blue")}" y después la tecla ${colorKey(
+                  "yellow"
+                )}[Enter]${colorKey("blue")}, ${colorKey(
+                  "purple"
+                )}si no${colorKey(
+                  "blue"
+                )}, presione únicamente la tecla ${colorKey(
+                  "yellow"
+                )}[Enter]${colorKey("white")}: `
+              )
+            )
+              .trim()
+              .toLowerCase() === "s"
+          ) {
+            patient = (data as Patient).id;
+          }
+          // end: Case unique patient retrieve (found by id, email or slug)
+        }
+      } catch (e) {
+        // start: In case no patient/s retrieved
+        if (e.response.status === 404) {
+          print(
+            `${colorKey("purple")}El paciente con identificador ${colorKey(
+              "red"
+            )}${_patient}${colorKey("purple")} no pudo ser encontrado.`
+          );
+        } else {
+          print(
+            `${colorKey(
+              "red"
+            )}Ha ocurrido un error al obtener el/los pacientes...`
+          );
+          print(`${colorKey("red")}${JSON.stringify(e)}`);
+        }
+        // end: In case no patient/s retrieved
+      }
+    }
 
     let listenerUsername = "";
     try {

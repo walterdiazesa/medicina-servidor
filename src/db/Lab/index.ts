@@ -56,6 +56,7 @@ export async function getLaboratories(
   user: Payload
 ) {
   if (fields.hash) fields.hash = false;
+  if (fields.rsaPrivateKey) fields.rsaPrivateKey = false;
   if (!user["sub-user"] && !labFromUser) return [];
   const labs = await prisma.lab.findMany({
     take: limit,
@@ -120,6 +121,7 @@ export async function createLaboratory({
         publicEmail,
         img,
         installer: "generating",
+        rsaPrivateKey: "generating",
       },
       select: {
         id: true,
@@ -133,10 +135,10 @@ export async function createLaboratory({
         img: true,
       },
     });
-    generateListener(lab.id).then(async (listenerKey) => {
-      if (!listenerKey) return;
+    generateListener(lab.id).then(async ({ listenerKey, rsaPrivateKey }) => {
+      if (!listenerKey || !rsaPrivateKey) return;
       await prisma.lab.update({
-        data: { installer: listenerKey },
+        data: { installer: listenerKey, rsaPrivateKey },
         where: { id: lab.id },
       });
       const signedUrl = await getSignedFileUrl(

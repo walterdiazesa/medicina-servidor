@@ -9,15 +9,15 @@ const argon2Options = Object.freeze({
   timeCost: 80,
 });
 
-const CRYPTO_ALGORITHM = "aes-256-ctr";
-const CRYPTO_SECRET = process.env.CRYPTO_SECRET.trim();
-
 export const hash = async (text: string) =>
   await argon2.hash(text, argon2Options);
 export const verify = async (hash: string, text: string) =>
   await argon2.verify(hash, text, argon2Options);
 
-const encrypt = (text: string, iv?: string) => {
+/*
+const CRYPTO_ALGORITHM = "aes-256-ctr";
+const CRYPTO_SECRET = process.env.CRYPTO_SECRET.trim();
+  const encrypt = (text: string, iv?: string) => {
   const _iv = iv ? Buffer.from(iv, "hex") : crypto.randomBytes(16);
   const cipher = crypto.createCipheriv(CRYPTO_ALGORITHM, CRYPTO_SECRET, _iv);
 
@@ -82,4 +82,64 @@ export const revealSecret = (safe: string) => {
   const decodebase64 = indigest(safe);
   if (!decodebase64) return false;
   return decrypt(Buffer.from(decodebase64, "base64").toString("utf-8"));
+}; */
+
+const AES_ALGORITHM = "aes-256-cbc";
+
+export const rsaEncrypt = (data: string) => {
+  return crypto
+    .publicEncrypt(
+      {
+        key: PUBLIC_RSA_KEY,
+        padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
+        oaepHash: "sha256",
+      },
+      Buffer.from(data)
+    )
+    .toString("hex");
+};
+
+export const aesRSAKeyEncrypt = (text: string) => {
+  const iv = crypto.randomBytes(16);
+  const key = crypto.randomBytes(32);
+  const cipher = crypto.createCipheriv(AES_ALGORITHM, key, iv);
+
+  const encrypted = Buffer.concat([cipher.update(text), cipher.final()]);
+
+  return {
+    iv: iv.toString("hex"),
+    data: encrypted.toString("hex"),
+    key: rsaEncrypt(key.toString("hex")),
+  };
+};
+
+export const rsaDecrypt = (encryptedData: string, privateKey: string) => {
+  return crypto
+    .privateDecrypt(
+      {
+        key: privateKey,
+        padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
+        oaepHash: "sha256",
+      },
+      Buffer.from(encryptedData, "hex")
+    )
+    .toString();
+};
+
+export const aesRSAKeyDecrypt = (
+  encryptedObj: { iv: string; key: string; data: string },
+  privateKey: string
+) => {
+  const decipher = crypto.createDecipheriv(
+    AES_ALGORITHM,
+    Buffer.from(rsaDecrypt(encryptedObj["key"], privateKey), "hex"),
+    Buffer.from(encryptedObj["iv"], "hex")
+  );
+
+  const decrypted = Buffer.concat([
+    decipher.update(Buffer.from(encryptedObj["data"], "hex")),
+    decipher.final(),
+  ]);
+
+  return decrypted.toString();
 };

@@ -12,3 +12,6 @@ export const NoAuth = (onlyAdmin?: true) =>
     error: `Unauthorized operation`,
     key: onlyAdmin ? "admin" : "auth",
   });
+
+export const NotFound = (key: string) =>
+  new ResponseError({ error: "Not found", key });

@@ -1,10 +1,10 @@
 import { exec } from "pkg";
 import fs from "fs";
-import { generateSecret } from "../crypto/index.js";
-import AWSSDK from "aws-sdk";
 import { v4 } from "uuid";
 import path from "path";
-import { getSignedFileUrl, uploadFile } from "../aws/s3.js";
+import { uploadFile } from "../aws/s3.js";
+import crypto from "crypto";
+import { prisma } from "../db/handler.js";
 
 //#region @deprecated
 function setLicenseListener(license: string) {
@@ -24,9 +24,13 @@ const LISTENER_BUCKET = "listener";
 const getListenerName = (labId: string = "", ext: "exe" | "js" = "js") =>
   path.resolve("dist", "pkg", `Listener${labId}.${ext}`);
 
-const generateListenerFile = (labId: string, licenseHash: string) => {
+const generateListenerFile = (labId: string, rsaPublicKey: string) => {
   const data = fs.readFileSync(getListenerName(), "utf-8");
-  let dataWithLicenseHash = data.replace("%LICENSE%", licenseHash);
+  let dataWithLicenseHash = data.replace("%LICENSE%", labId);
+  dataWithLicenseHash = dataWithLicenseHash.replace(
+    "%RSA_PUBLIC%",
+    rsaPublicKey
+  );
   if (process.env.NODE_ENV.trim() === "DEV")
     dataWithLicenseHash = dataWithLicenseHash.replace("%ENV%", "DEV");
   fs.writeFileSync(getListenerName(labId), dataWithLicenseHash, "utf-8");
@@ -38,8 +42,13 @@ const removeListenerFile = (labId: string, ext: "exe" | "js" = "js") => {
 };
 
 export const generateListener = async (labId: string) => {
-  const licenseHash = generateSecret(labId);
-  generateListenerFile(labId, licenseHash);
+  const { publicKey, privateKey } = crypto.generateKeyPairSync("rsa", {
+    modulusLength: 2048,
+  });
+  generateListenerFile(
+    labId,
+    publicKey.export({ type: "pkcs1", format: "pem" }) as string
+  );
   await exec([
     "--compress",
     "GZip",
@@ -56,7 +65,14 @@ export const generateListener = async (labId: string) => {
     fs.readFileSync(getListenerName(labId, "exe")),
     "application/x-msdownload"
   );
-  removeListenerFile(labId);
-  removeListenerFile(labId, "exe");
-  if (isListenerUploader) return `${LISTENER_BUCKET}/${listenerS3Key}`;
+  // removeListenerFile(labId);
+  // removeListenerFile(labId, "exe");
+  if (isListenerUploader)
+    return {
+      listenerKey: `${LISTENER_BUCKET}/${listenerS3Key}`,
+      rsaPrivateKey: privateKey.export({
+        type: "pkcs1",
+        format: "pem",
+      }) as string,
+    };
 };

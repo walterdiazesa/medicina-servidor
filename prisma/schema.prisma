@@ -22,6 +22,7 @@ model Test {
   issuerId String?    @db.ObjectId
   patientId String?    @db.ObjectId
   listenerRequest  ListenerRequest?
+  isDeleted Boolean @default(false)
 }
 
 model ListenerRequest {
@@ -55,6 +56,7 @@ model Lab {
   publicEmail String
   img   String
   installer String?
+  rsaPrivateKey String
   createdAt DateTime @default(now())
   userIds String[]   @db.ObjectId
   ownerIds String[]   @db.ObjectId

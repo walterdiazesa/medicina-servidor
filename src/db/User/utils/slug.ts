@@ -1,10 +1,4 @@
-const normalize = (string: string) => {
-  return string
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/\s/g, " ")
-    .toLowerCase();
-};
+import { normalize } from "../../../utils/index.js";
 
 const randElement = () => {
   const keys = [

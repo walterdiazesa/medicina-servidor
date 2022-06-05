@@ -115,8 +115,6 @@ export async function createTest(
     listenerUsername,
   }: {
     chemData: string;
-    issuer: string;
-    patient: string;
     listenerUsername: string;
   },
   listener: ListenerPayload
@@ -168,6 +166,30 @@ export async function createTest(
     });
   return test;
 }
+
+//#region ChemTest
+export async function createChemTest(
+  {
+    raw,
+    chem,
+    listenerUsername,
+  }: {
+    raw: string;
+    chem: string;
+    listenerUsername: string;
+  },
+  listener: ListenerPayload
+) {
+  return await prisma.chem.create({
+    data: {
+      raw,
+      chem,
+      ip: listener.ip,
+      reqUsername: listenerUsername,
+    },
+  });
+}
+//#endregion
 
 export async function deleteTest(id: string, user: Payload) {
   if (!(await getTestAccess(id, user)))

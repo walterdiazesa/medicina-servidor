@@ -6,6 +6,7 @@ import {
   getTestAccess,
   deleteTest,
   updateTest,
+  createChemTest,
 } from "../../db/Test/index.js";
 import { AuthRequest, ListenerRequest } from "../../types/Express/index.js";
 import { ResponseError } from "../../types/Responses/error.js";
@@ -40,6 +41,14 @@ router.post("/", listenerGuard, async (req: ListenerRequest, res) => {
   else res.status(201);
   res.send(test);
 });
+
+//#region ChemTest
+router.post("/chem/", listenerGuard, async (req: ListenerRequest, res) => {
+  const chemTest = await createChemTest(req.body, req.listener);
+  res.status(201).send(chemTest);
+});
+//#endregion
+
 router.patch("/:id", authGuard, async (req: AuthRequest, res) => {
   if (!isValidObjectID(req.params.id))
     return res.status(404).send(NotFound("id"));

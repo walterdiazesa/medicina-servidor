@@ -1,4 +1,5 @@
 import { Prisma, Patient } from "@prisma/client";
+import { NotUnique } from "../../routes/Responses/index.js";
 import { DefaultSelectMany } from "../../types/select";
 import { isValidObjectID } from "../../utils/index.js";
 import { prisma } from "../handler.js";
@@ -45,11 +46,27 @@ export async function getPatient(patient: string) {
         { email: patient },
         { dui: patient },
         { phone: patient },
-        { name: { contains: patient } },
+        { name: { contains: patient, mode: "insensitive" } },
       ],
     },
     orderBy: { name: "asc" },
     select,
   });
   return !_patients.length ? null : _patients;
+}
+
+// Make upsert?
+export async function createPatient(data: Patient) {
+  delete data.id;
+  try {
+    return await prisma.patient.create({ data });
+  } catch (e) {
+    /* !@unique */
+    if (e.code === "P2002" && e.meta) {
+      return NotUnique(
+        (e.meta["target"] as string).replace("Patient_", "").replace("_key", "")
+      );
+    }
+    console.error({ e });
+  }
 }

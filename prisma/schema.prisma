@@ -25,6 +25,14 @@ model Test {
   isDeleted Boolean @default(false)
 }
 
+model Chem {
+  id       String    @id @default(auto()) @map("_id") @db.ObjectId
+  chem String
+  raw String
+  ip  String
+  reqUsername String
+}
+
 model ListenerRequest {
   id       String    @id @default(auto()) @map("_id") @db.ObjectId
   test      Test      @relation(fields: [testId], references: [id])

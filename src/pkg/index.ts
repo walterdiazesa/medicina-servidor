@@ -65,8 +65,8 @@ export const generateListener = async (labId: string) => {
     fs.readFileSync(getListenerName(labId, "exe")),
     "application/x-msdownload"
   );
-  // removeListenerFile(labId);
-  // removeListenerFile(labId, "exe");
+  removeListenerFile(labId);
+  removeListenerFile(labId, "exe");
   if (isListenerUploader)
     return {
       listenerKey: `${LISTENER_BUCKET}/${listenerS3Key}`,

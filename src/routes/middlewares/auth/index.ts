@@ -1,6 +1,9 @@
 import { Response, NextFunction } from "express";
 import { verifyJWT } from "../../../auth/index.js";
-import { aesRSAKeyDecrypt, rsaDecrypt } from "../../../crypto/index.js";
+import {
+  listenerAesRSAKeyDecrypt,
+  listenerRsaDecrypt,
+} from "../../../crypto/index.js";
 import { prisma } from "../../../db/handler.js";
 import { AuthRequest, ListenerRequest } from "../../../types/Express/index.js";
 import { ResponseError } from "../../../types/Responses/error.js";
@@ -61,7 +64,10 @@ export async function listenerGuard(
 
   let bodyStep: "Decrypt" | "Json" = "Decrypt";
   try {
-    const decryptBody = aesRSAKeyDecrypt({ iv, key, data }, rsaPrivateKey);
+    const decryptBody = listenerAesRSAKeyDecrypt(
+      { iv, key, data },
+      rsaPrivateKey
+    );
     bodyStep = "Json";
     const body: {
       chemData: string;

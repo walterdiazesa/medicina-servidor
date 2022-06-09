@@ -86,34 +86,30 @@ export const revealSecret = (safe: string) => {
 
 const AES_ALGORITHM = "aes-256-cbc";
 
-export const rsaEncrypt = (data: string) => {
+export const emailPrivateRsaEncrypt = (data: string) => {
   return crypto
-    .publicEncrypt(
-      {
-        key: PUBLIC_RSA_KEY,
-        padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
-        oaepHash: "sha256",
-      },
-      Buffer.from(data)
-    )
+    .privateEncrypt(process.env.PRIVATE_EMAIL_RSA_KEY.trim(), Buffer.from(data))
     .toString("hex");
 };
 
-export const aesRSAKeyEncrypt = (text: string) => {
-  const iv = crypto.randomBytes(16);
-  const key = crypto.randomBytes(32);
-  const cipher = crypto.createCipheriv(AES_ALGORITHM, key, iv);
-
-  const encrypted = Buffer.concat([cipher.update(text), cipher.final()]);
-
-  return {
-    iv: iv.toString("hex"),
-    data: encrypted.toString("hex"),
-    key: rsaEncrypt(key.toString("hex")),
-  };
+export const emailPublicRsaDecrypt = (encryptedData: string) => {
+  try {
+    return crypto
+      .publicDecrypt(
+        process.env.PUBLIC_EMAIL_RSA_KEY!.trim(),
+        Buffer.from(encryptedData, "hex")
+      )
+      .toString();
+  } catch (e) {
+    console.error(e);
+    return null;
+  }
 };
 
-export const rsaDecrypt = (encryptedData: string, privateKey: string) => {
+export const listenerRsaDecrypt = (
+  encryptedData: string,
+  privateKey: string
+) => {
   return crypto
     .privateDecrypt(
       {
@@ -126,13 +122,13 @@ export const rsaDecrypt = (encryptedData: string, privateKey: string) => {
     .toString();
 };
 
-export const aesRSAKeyDecrypt = (
+export const listenerAesRSAKeyDecrypt = (
   encryptedObj: { iv: string; key: string; data: string },
   privateKey: string
 ) => {
   const decipher = crypto.createDecipheriv(
     AES_ALGORITHM,
-    Buffer.from(rsaDecrypt(encryptedObj["key"], privateKey), "hex"),
+    Buffer.from(listenerRsaDecrypt(encryptedObj["key"], privateKey), "hex"),
     Buffer.from(encryptedObj["iv"], "hex")
   );
 

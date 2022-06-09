@@ -1,6 +1,9 @@
 import { DefaultSelectMany } from "../../types/select";
 import { prisma } from "../handler.js";
-import { hash as hashPassword } from "../../crypto/index.js";
+import {
+  emailPrivateRsaEncrypt,
+  hash as hashPassword,
+} from "../../crypto/index.js";
 import { NotUnique } from "../../routes/Responses/index.js";
 import { signJWT } from "../../auth/index.js";
 import { Lab, Prisma } from "@prisma/client";
@@ -9,6 +12,7 @@ import { Payload } from "../../types/Auth";
 import { generateListener } from "../../pkg/index.js";
 import { emit } from "../../socketio/index.js";
 import { getSignedFileUrl } from "../../aws/s3.js";
+import { ResponseError } from "../../types/Responses/error.js";
 
 const LISTENER_SIGNED_URL_EXPIRE = 3600;
 
@@ -163,5 +167,163 @@ export async function createLaboratory({
         e.meta["target"].replace("Lab_", "").replace("_key", "")
       );
     }
+  }
+}
+
+export async function upsertOwner(
+  owner: string,
+  labId: string,
+  type: "ADD" | "REMOVE"
+) {
+  try {
+    if (type === "REMOVE") {
+      await prisma.lab.update({
+        data: {
+          ownerIds: {
+            set: (
+              await prisma.lab.findUnique({
+                where: { id: labId },
+                select: { ownerIds: true },
+              })
+            ).ownerIds.filter((ownerId) => ownerId !== owner),
+          },
+        },
+        where: { id: labId },
+        select: { id: true },
+      });
+      await prisma.user.update({
+        data: {
+          ownerIds: {
+            set: (
+              await prisma.user.findUnique({
+                where: { id: owner },
+                select: { ownerIds: true },
+              })
+            ).ownerIds.filter((ownerId) => ownerId !== labId),
+          },
+        },
+        where: { id: labId },
+        select: { id: true },
+      });
+    } else {
+      await prisma.lab.update({
+        data: {
+          ownerIds: {
+            push: owner,
+          },
+        },
+        where: { id: labId },
+        select: { id: true },
+      });
+      await prisma.user.update({
+        data: {
+          ownerIds: {
+            push: labId,
+          },
+        },
+        where: { id: owner },
+        select: { id: true },
+      });
+    }
+    return true;
+  } catch (e) {
+    console.error(e);
+    return false;
+  }
+}
+
+export async function inviteUser(user: string, labId: string) {
+  const alreadyInApp = await prisma.user.findUnique({
+    where: {
+      email: user,
+    },
+  });
+
+  if (alreadyInApp) {
+    await prisma.lab.update({
+      data: {
+        userIds: {
+          push: alreadyInApp.id,
+        },
+      },
+      where: { id: labId },
+      select: { id: true },
+    });
+    await prisma.user.update({
+      data: {
+        labIds: {
+          push: labId,
+        },
+      },
+      where: { id: alreadyInApp.id },
+      select: { id: true },
+    });
+    return { ...alreadyInApp, owner: false };
+  }
+
+  /*
+  @deprecated
+  if (alreadyInLab)
+    return new ResponseError({
+      error: "User already a employee for this lab",
+      key: "redundant",
+    });
+  */
+
+  return {
+    hash: emailPrivateRsaEncrypt(
+      JSON.stringify({ email: user, labId, expires: Date.now() + 259_200_000 })
+    ),
+    length: JSON.stringify({
+      email: user,
+      labId,
+      expires: Date.now() + 259_200_000,
+    }).length,
+  };
+}
+
+export async function removeUser(user: string, labId: string) {
+  try {
+    const { userIds, ownerIds: labOwnerIds } = await prisma.lab.findUnique({
+      where: { id: labId },
+      select: { ownerIds: true, userIds: true },
+    });
+    const { labIds, ownerIds: userOwnerIds } = await prisma.user.findUnique({
+      where: { id: user },
+      select: { ownerIds: true, labIds: true },
+    });
+    const newLabUserIds = userIds.filter((userId) => userId !== user);
+    const newLabOwnerIds = labOwnerIds.filter((ownerId) => ownerId !== user);
+
+    const newUserLabIds = labIds.filter((_labId) => _labId !== labId);
+    const newUserOwnerIds = userOwnerIds.filter((_labId) => _labId !== labId);
+    await prisma.lab.update({
+      data: {
+        ownerIds: {
+          set: newLabOwnerIds,
+        },
+        userIds: {
+          set: newLabUserIds,
+        },
+      },
+      where: { id: labId },
+      select: { id: true },
+    });
+    await prisma.user.update({
+      data: {
+        ownerIds: {
+          set: newUserLabIds,
+        },
+        labIds: {
+          set: newUserOwnerIds,
+        },
+      },
+      where: {
+        id: user,
+      },
+    });
+    return true;
+  } catch (e) {
+    return false;
   }
 }

@@ -34,6 +34,14 @@ export async function getTest(id: string) {
           email: true,
         },
       },
+      issuer: {
+        select: {
+          name: true,
+          profileImg: true,
+          slug: true,
+          email: true,
+        },
+      },
     },
   });
 }
@@ -219,48 +227,70 @@ export async function updateTest(
   if (data.issuerId && !isValidObjectID(data.issuerId))
     return new ResponseError({ error: "Invalid field", key: "issuerid" });
 
-  axios
-    .get(`${process.env.APP_HOST}/api/revalidatetest`, {
-      params: {
-        test: id,
-        revalidate_token: process.env.REVALIDATE_TOKEN,
-      },
-    })
-    .then(({ status }) => {
-      if (status === 500) console.error(`revalidation on /tests/${id} failed!`);
-      if (status === 401)
-        console.error(`invalid token for revalidating /tests/${id}`);
-    })
-    .catch((e) => {
-      if (e.response.status === 500)
-        console.error(`revalidation on /tests/${id} failed!`);
-      if (e.response.status === 401)
-        console.error(`invalid token for revalidating /tests/${id}`);
-    });
   /* const select: Prisma.TestSelect = {}
   for (const key of Object.keys(data)) select[key as keyof Test] = true */
-  return await prisma.test.update({
-    data,
-    where: { id },
-    ...((data["issuerId"] || data["patientId"]) && {
-      include: {
-        ...(data["issuerId"] && {
-          issuer: { select: { name: true, email: true } },
-        }),
-        ...(data["patientId"] && {
-          patient: {
-            select: {
-              id: true,
-              email: true,
-              name: true,
-              dui: true,
-              phone: true,
-              sex: true,
-              dateBorn: true,
+  try {
+    const searchTest = await prisma.test.findUnique({ where: { id } });
+    if (!searchTest)
+      return new ResponseError({ error: "Not test found", key: "id" });
+
+    if (data.patientId && searchTest.patientId)
+      return new ResponseError({
+        error: "Cannot update a patient after being setted",
+        key: "patientid",
+      });
+    if (data.issuerId && searchTest.issuerId)
+      return new ResponseError({
+        error: "Cannot update a issuer after being setted",
+        key: "issuerid",
+      });
+
+    const test = await prisma.test.update({
+      data,
+      where: { id },
+      ...((data["issuerId"] || data["patientId"]) && {
+        include: {
+          ...(data["issuerId"] && {
+            issuer: { select: { name: true, email: true, slug: true } },
+          }),
+          ...(data["patientId"] && {
+            patient: {
+              select: {
+                id: true,
+                email: true,
+                name: true,
+                dui: true,
+                phone: true,
+                sex: true,
+                dateBorn: true,
+              },
             },
-          },
-        }),
-      },
-    }),
-  });
+          }),
+        },
+      }),
+    });
+    axios
+      .get(`${process.env.APP_HOST}/api/revalidatetest`, {
+        params: {
+          test: id,
+          revalidate_token: process.env.REVALIDATE_TOKEN,
+        },
+      })
+      .then(({ status }) => {
+        if (status === 500)
+          console.error(`revalidation on /tests/${id} failed!`);
+        if (status === 401)
+          console.error(`invalid token for revalidating /tests/${id}`);
+      })
+      .catch((e) => {
+        if (e.response.status === 500)
+          console.error(`revalidation on /tests/${id} failed!`);
+        if (e.response.status === 401)
+          console.error(`invalid token for revalidating /tests/${id}`);
+      });
+    return test;
+  } catch (e) {
+    // if (e.code !== "P2016") P2016 = RecordNotFound
+    console.error(e);
+  }
 }

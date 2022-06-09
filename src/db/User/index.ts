@@ -2,6 +2,7 @@ import { Prisma, User } from "@prisma/client";
 import { signJWT } from "../../auth/index.js";
 import { hash as hashPassword } from "../../crypto/index.js";
 import { NotUnique } from "../../routes/Responses/index.js";
+import { Payload } from "../../types/Auth/index.js";
 import { DefaultSelectMany } from "../../types/select";
 import { isValidObjectID } from "../../utils/index.js";
 import { prisma } from "../handler.js";
@@ -23,7 +24,44 @@ export async function getUser(user: string) {
       });
 }
 
-export async function getEmployee(labId: string, user: string) {
+export async function getEmployee(labId: string, employee: string) {
+  const select: Prisma.UserSelect = {
+    id: true,
+    email: true,
+    name: true,
+    slug: true,
+  };
+  /*
+  Can't send a empty employee because how routes with express work
+  if (!employee)
+    return await prisma.user.findMany({
+      where: { OR: [{ labIds: { has: labId } }, { ownerIds: { has: labId } }] },
+      select,
+      orderBy: { name: "asc" },
+    });
+  */
+
+  const employees = await prisma.user.findMany({
+    where: {
+      AND: [
+        {
+          OR: [
+            { email: employee },
+            { slug: employee },
+            { name: { contains: employee, mode: "insensitive" } },
+          ],
+        },
+        { OR: [{ labIds: { has: labId } }, { ownerIds: { has: labId } }] },
+      ],
+    },
+    select,
+    orderBy: { name: "asc" },
+  });
+  return !employees.length ? null : employees;
+}
+
+/* @deprecated */
+export async function getListenerEmployee(labId: string, user: string) {
   if (!user) return null;
   const select: Prisma.UserSelect = {
     id: true,
@@ -73,18 +111,37 @@ export async function getUsers({
   order = "asc",
   labId,
 }: DefaultSelectMany & { labId?: string }) {
-  return await prisma.user.findMany({
+  const users = await prisma.user.findMany({
     take: limit,
     orderBy: { name: order },
     where: {
       ...(labId && {
-        labIds: {
-          has: labId,
-        },
+        OR: [
+          {
+            labIds: {
+              has: labId,
+            },
+          },
+          {
+            ownerIds: {
+              has: labId,
+            },
+          },
+        ],
       }),
     },
     select: { id: true, email: true, name: true, slug: true, profileImg: true },
   });
+  const response: any = { users };
+  if (labId) {
+    response["ownersIds"] = (
+      await prisma.lab.findUnique({
+        where: { id: labId },
+        select: { ownerIds: true },
+      })
+    ).ownerIds;
+  }
+  return response;
 }
 
 export async function createUser({
@@ -92,11 +149,13 @@ export async function createUser({
   name,
   password,
   profileImg,
+  labId,
 }: {
   email: string;
   name: string;
   password: string;
   profileImg?: string;
+  labId: string;
 }) {
   const hash = await hashPassword(password);
   let slug = slugName(name);
@@ -108,6 +167,9 @@ export async function createUser({
         hash,
         slug,
         profileImg,
+        labIds: {
+          set: [labId],
+        },
       },
       select: {
         id: true,
@@ -116,6 +178,11 @@ export async function createUser({
         slug: true,
         profileImg: true,
       },
+    });
+    await prisma.lab.update({
+      where: { id: labId },
+      data: { userIds: { push: user.id } },
+      select: { id: true },
     });
     return {
       access_token: signJWT({ "sub-user": user.id, sub: user.email }),
@@ -136,6 +203,9 @@ export async function createUser({
               hash,
               slug,
               profileImg,
+              labIds: {
+                set: [labId],
+              },
             },
             select: {
               id: true,
@@ -144,6 +214,11 @@ export async function createUser({
               slug: true,
               profileImg: true,
             },
+          });
+          await prisma.lab.update({
+            where: { id: labId },
+            data: { userIds: { push: user.id } },
+            select: { id: true },
           });
           return {
             access_token: signJWT({ "sub-user": user.id, sub: user.email }),

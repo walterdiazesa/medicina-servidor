@@ -13,6 +13,8 @@ import { generateListener } from "../../pkg/index.js";
 import { emit } from "../../socketio/index.js";
 import { getSignedFileUrl } from "../../aws/s3.js";
 import { ResponseError } from "../../types/Responses/error.js";
+import mailTransport from "../../Mail/index.js";
+import { registerByInvite } from "../../Mail/Templates/registerbyinvite.js";
 
 const LISTENER_SIGNED_URL_EXPIRE = 3600;
 
@@ -202,7 +204,7 @@ export async function upsertOwner(
             ).ownerIds.filter((ownerId) => ownerId !== labId),
           },
         },
-        where: { id: labId },
+        where: { id: owner },
         select: { id: true },
       });
     } else {
@@ -237,9 +239,28 @@ export async function inviteUser(user: string, labId: string) {
     where: {
       email: user,
     },
+    select: {
+      id: true,
+      name: true,
+      profileImg: true,
+      slug: true,
+      email: true,
+      labIds: true,
+      ownerIds: true,
+    },
   });
 
   if (alreadyInApp) {
+    const userLabsList = new Set([
+      ...alreadyInApp.ownerIds,
+      ...alreadyInApp.labIds,
+    ]);
+    if (userLabsList.has(labId))
+      return new ResponseError({
+        error: "User already a employee for this lab",
+        key: "redundant",
+      });
+
     await prisma.lab.update({
       data: {
         userIds: {
@@ -261,25 +282,23 @@ export async function inviteUser(user: string, labId: string) {
     return { ...alreadyInApp, owner: false };
   }
 
-  /*
-  @deprecated
-  if (alreadyInLab)
-    return new ResponseError({
-      error: "User already a employee for this lab",
-      key: "redundant",
-    });
-  */
+  const invitationHash = emailPrivateRsaEncrypt(
+    JSON.stringify({ email: user, labId, expires: Date.now() + 259_200_000 })
+  );
 
-  return {
-    hash: emailPrivateRsaEncrypt(
-      JSON.stringify({ email: user, labId, expires: Date.now() + 259_200_000 })
-    ),
-    length: JSON.stringify({
-      email: user,
-      labId,
-      expires: Date.now() + 259_200_000,
-    }).length,
-  };
+  const { name, img } = await prisma.lab.findUnique({
+    where: { id: labId },
+    select: { name: true, img: true },
+  });
+
+  await mailTransport.sendMail({
+    from: `"Flemik 🧪" <${process.env.MAILER_USERNAME.trim().split("|")[1]}>`,
+    to: user,
+    subject: `"${name}" te ha invitado a su laboratorio`,
+    html: registerByInvite({ name, img, invitationHash }),
+  });
+
+  return true;
 }
 
 export async function removeUser(user: string, labId: string) {

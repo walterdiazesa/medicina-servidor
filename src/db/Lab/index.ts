@@ -18,24 +18,27 @@ import { registerByInvite } from "../../Mail/Templates/registerbyinvite.js";
 
 const LISTENER_SIGNED_URL_EXPIRE = 3600;
 
-export async function getLaboratory(lab: string) {
-  const select: Prisma.LabSelect = {
-    id: true,
-    email: true,
-    name: true,
-    phone: true,
-    address: true,
-    publicPhone: true,
-    web: true,
-    publicEmail: true,
-    img: true,
-  };
+const labPublicSelect: Prisma.LabSelect = {
+  id: true,
+  email: true,
+  name: true,
+  phone: true,
+  address: true,
+  publicPhone: true,
+  web: true,
+  publicEmail: true,
+  img: true,
+};
 
+export async function getLaboratory(lab: string) {
   return isValidObjectID(lab)
-    ? await prisma.lab.findUnique({ where: { id: lab }, select })
+    ? await prisma.lab.findUnique({
+        where: { id: lab },
+        select: labPublicSelect,
+      })
     : await prisma.lab.findFirst({
         where: { OR: [{ email: lab }, { name: lab }] },
-        select,
+        select: labPublicSelect,
       });
 }
 
@@ -43,17 +46,7 @@ export async function getLaboratories(
   {
     limit,
     order = "asc",
-    fields = {
-      id: true,
-      email: true,
-      name: true,
-      phone: true,
-      address: true,
-      publicPhone: true,
-      web: true,
-      publicEmail: true,
-      img: true,
-    },
+    fields = labPublicSelect,
     labFromUser = true,
   }: DefaultSelectMany & {
     fields?: Prisma.LabSelect;
@@ -179,15 +172,25 @@ export async function upsertOwner(
 ) {
   try {
     if (type === "REMOVE") {
+      const [{ ownerIds: labOwnerIds }, { ownerIds: userOwnerIds }] =
+        await Promise.all([
+          prisma.lab.findUnique({
+            where: { id: labId },
+            select: { ownerIds: true },
+          }),
+          prisma.user.findUnique({
+            where: { id: owner },
+            select: { ownerIds: true },
+          }),
+        ]);
+      const ownerIdsSet = new Set(labOwnerIds);
+      ownerIdsSet.delete(owner);
+      const userIdsSet = new Set(userOwnerIds);
+      userIdsSet.delete(labId);
       await prisma.lab.update({
         data: {
           ownerIds: {
-            set: (
-              await prisma.lab.findUnique({
-                where: { id: labId },
-                select: { ownerIds: true },
-              })
-            ).ownerIds.filter((ownerId) => ownerId !== owner),
+            set: Array.from(ownerIdsSet),
           },
         },
         where: { id: labId },
@@ -196,12 +199,7 @@ export async function upsertOwner(
       await prisma.user.update({
         data: {
           ownerIds: {
-            set: (
-              await prisma.user.findUnique({
-                where: { id: owner },
-                select: { ownerIds: true },
-              })
-            ).ownerIds.filter((ownerId) => ownerId !== labId),
+            set: Array.from(userIdsSet),
           },
         },
         where: { id: owner },
@@ -303,26 +301,37 @@ export async function inviteUser(user: string, labId: string) {
 
 export async function removeUser(user: string, labId: string) {
   try {
-    const { userIds, ownerIds: labOwnerIds } = await prisma.lab.findUnique({
-      where: { id: labId },
-      select: { ownerIds: true, userIds: true },
-    });
-    const { labIds, ownerIds: userOwnerIds } = await prisma.user.findUnique({
-      where: { id: user },
-      select: { ownerIds: true, labIds: true },
-    });
-    const newLabUserIds = userIds.filter((userId) => userId !== user);
-    const newLabOwnerIds = labOwnerIds.filter((ownerId) => ownerId !== user);
+    const [
+      { userIds, ownerIds: labOwnerIds },
+      { labIds, ownerIds: userOwnerIds },
+    ] = await Promise.all([
+      prisma.lab.findUnique({
+        where: { id: labId },
+        select: { ownerIds: true, userIds: true },
+      }),
+      prisma.user.findUnique({
+        where: { id: user },
+        select: { ownerIds: true, labIds: true },
+      }),
+    ]);
 
-    const newUserLabIds = labIds.filter((_labId) => _labId !== labId);
-    const newUserOwnerIds = userOwnerIds.filter((_labId) => _labId !== labId);
+    const newLabUserIds = new Set(userIds);
+    newLabUserIds.delete(user);
+    const newLabOwnerIds = new Set(labOwnerIds);
+    newLabOwnerIds.delete(user);
+
+    const newUserLabIds = new Set(labIds);
+    newUserLabIds.delete(labId);
+    const newUserOwnerIds = new Set(userOwnerIds);
+    newUserOwnerIds.delete(labId);
+
     await prisma.lab.update({
       data: {
         ownerIds: {
-          set: newLabOwnerIds,
+          set: Array.from(newLabOwnerIds),
         },
         userIds: {
-          set: newLabUserIds,
+          set: Array.from(newLabUserIds),
         },
       },
       where: { id: labId },
@@ -331,10 +340,10 @@ export async function removeUser(user: string, labId: string) {
     await prisma.user.update({
       data: {
         ownerIds: {
-          set: newUserLabIds,
+          set: Array.from(newUserLabIds),
         },
         labIds: {
-          set: newUserOwnerIds,
+          set: Array.from(newUserOwnerIds),
         },
       },
       where: {
@@ -343,6 +352,39 @@ export async function removeUser(user: string, labId: string) {
     });
     return true;
   } catch (e) {
+    return false;
+  }
+}
+
+export async function updateLab(id: string, lab: Partial<Lab>) {
+  try {
+    delete lab.hash;
+    delete lab.id;
+    delete lab.installer;
+    delete lab.ownerIds;
+    delete lab.rsaPrivateKey;
+    delete lab.userIds;
+
+    if (lab.img) {
+      if (!lab.img.startsWith("https://public-files.s3.filebase.com/"))
+        return new ResponseError({
+          error: "Invalid image storage host",
+          key: "storage",
+        });
+      lab.img = await getSignedFileUrl(
+        "public-files",
+        lab.img.split("/").reverse()[0],
+        0
+      );
+    }
+
+    return (await prisma.lab.update({
+      where: { id },
+      data: lab,
+      select: labPublicSelect,
+    })) as Lab;
+  } catch (e) {
+    console.error(e);
     return false;
   }
 }

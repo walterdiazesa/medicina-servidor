@@ -5,6 +5,7 @@ export type Payload = {
   exp: number;
   iss: "medicina-servidor";
   sub: string;
+  img: string;
 } & (
   | { "sub-user": string; "sub-lab": string }
   | { "sub-lab": string }

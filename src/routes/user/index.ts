@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { signJWT } from "../../auth/index.js";
 import { emailPublicRsaDecrypt } from "../../crypto/index.js";
 import { getLaboratories } from "../../db/Lab/index.js";
 import {
@@ -6,6 +7,7 @@ import {
   getUsers,
   createUser,
   getEmployee,
+  updateUser,
 } from "../../db/User/index.js";
 import { AuthRequest, ListenerRequest } from "../../types/Express/index.js";
 import { ResponseError } from "../../types/Responses/error.js";
@@ -15,11 +17,39 @@ import { authGuard, listenerGuard } from "../middlewares/index.js";
 const router = Router();
 
 //router.get("/", async (req, res) => res.send(await getUsers(req.query)));
+router.get("/me", authGuard, async (req: AuthRequest, res) =>
+  res.send(await getUser(req.user["sub-user"]))
+);
+router.patch("/me", authGuard, async (req: AuthRequest, res) => {
+  if (!req.user["sub-user"])
+    return res.status(403).send(
+      new ResponseError({
+        error: "No user profile for this account",
+        key: "role",
+      })
+    );
+  const lastPayloadImg = req.user.img;
+  const user = await updateUser(req.user["sub-user"], req.body);
+  if (user instanceof ResponseError) res.status(400);
+  else if (
+    user &&
+    req.body.profileImg &&
+    (!req.user.img ||
+      !req.user["sub-lab"] ||
+      (lastPayloadImg && lastPayloadImg !== user.profileImg))
+  )
+    res.cookie("session", signJWT({ ...req.user, img: user.profileImg }), {
+      httpOnly: true,
+      secure: process.env.NODE_ENV.trim() === "PROD",
+      sameSite: process.env.NODE_ENV.trim() === "PROD" ? "none" : undefined,
+    });
+  res.send(user);
+});
 router.get(["/", "/:lab"], authGuard, async (req: AuthRequest, res) => {
   if (!req.user["sub-lab"])
-    return res.status(400).send(
+    return res.status(403).send(
       new ResponseError({
-        error: "No lab owner",
+        error: "Not a lab owner",
         key: "lab",
       })
     );
@@ -37,7 +67,7 @@ router.get("/:lab/:employee", authGuard, async (req: AuthRequest, res) => {
       req.user["sub-lab"],
     ].includes(req.params.lab)
   )
-    return res.status(400).send(
+    return res.status(403).send(
       new ResponseError({
         error: "Requested lab not in user lab list",
         key: "lab",
@@ -50,9 +80,6 @@ router.get("/:lab/:employee", authGuard, async (req: AuthRequest, res) => {
   if (!employee) res.status(404);
   res.send(employee);
 });
-router.get("/me", authGuard, async (req: AuthRequest, res) =>
-  res.send(await getUser(req.user["sub-user"]))
-);
 router.get("/:id", async (req, res) => res.send(await getUser(req.params.id)));
 router.post("/", async (req, res) => {
   const { name, password, profileImg, inviteHash }: { [key: string]: string } =
@@ -82,14 +109,12 @@ router.post("/", async (req, res) => {
   } = JSON.parse(decrypted);
 
   if (expires < Date.now())
-    return res
-      .status(410)
-      .send(
-        new ResponseError({
-          error: "The requested invitation already expired.",
-          key: "timeout",
-        })
-      );
+    return res.status(410).send(
+      new ResponseError({
+        error: "The requested invitation already expired.",
+        key: "timeout",
+      })
+    );
 
   const user = await createUser({ name, email, password, profileImg, labId });
   if (user instanceof ResponseError) return res.status(400).send(user);

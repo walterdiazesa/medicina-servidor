@@ -11,6 +11,7 @@ import {
   labRoutes,
   authRoutes,
   patientRoutes,
+  fileRoutes,
 } from "./routes/index.js";
 import { DefaultEventsMap } from "socket.io/dist/typed-events";
 
@@ -21,6 +22,7 @@ import { cookieParser } from "./routes/middlewares/index.js";
 import { verifyJWT } from "./auth/index.js";
 import { getLaboratories } from "./db/Lab/index.js";
 import { parseQueryBoolean } from "./routes/middlewares/index.js";
+import { getFileUploadUrl } from "./aws/s3.js";
 
 const numCpus = cpus().length;
 
@@ -93,6 +95,7 @@ if (cluster.isPrimary) {
   app.use("/patients", patientRoutes);
   app.use("/labs", labRoutes);
   app.use("/auth", authRoutes);
+  app.use("/files", fileRoutes);
 
   const server = app.listen(process.env.PORT || 8080, () =>
     console.log("Medicina API running...", process.env.PORT || 8080)

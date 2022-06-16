@@ -2,6 +2,14 @@ import testRoutes from "./test/index.js";
 import userRoutes from "./user/index.js";
 import labRoutes from "./lab/index.js";
 import authRoutes from "./auth/index.js";
+import fileRoutes from "./files/index.js";
 import patientRoutes from "./patient/index.js";
 
-export { testRoutes, userRoutes, labRoutes, authRoutes, patientRoutes };
+export {
+  testRoutes,
+  userRoutes,
+  labRoutes,
+  authRoutes,
+  patientRoutes,
+  fileRoutes,
+};

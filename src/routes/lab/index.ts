@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { signJWT } from "../../auth/index.js";
 import {
   getLaboratory,
   getLaboratories,
@@ -6,6 +7,7 @@ import {
   upsertOwner,
   removeUser,
   inviteUser,
+  updateLab,
 } from "../../db/Lab/index.js";
 import { AuthRequest } from "../../types/Express/index.js";
 import { ResponseError } from "../../types/Responses/error.js";
@@ -16,6 +18,28 @@ const router = Router();
 router.get("/", authGuard, async (req: AuthRequest, res) =>
   res.send(await getLaboratories(req.query, req.user))
 );
+router.get("/mine", authGuard, async (req: AuthRequest, res) => {
+  if (!req.user["sub-lab"])
+    return res
+      .status(403)
+      .send(new ResponseError({ error: "Not a lab user", key: "role" }));
+  res.send(await getLaboratory(req.user["sub-lab"]));
+});
+router.patch("/mine", authGuard, async (req: AuthRequest, res) => {
+  if (!req.user["sub-lab"])
+    return res
+      .status(403)
+      .send(new ResponseError({ error: "Not a lab user", key: "role" }));
+  const lab = await updateLab(req.user["sub-lab"], req.body);
+  if (lab instanceof ResponseError) res.status(400);
+  else if (lab)
+    res.cookie("session", signJWT({ ...req.user, img: lab.img }), {
+      httpOnly: true,
+      secure: process.env.NODE_ENV.trim() === "PROD",
+      sameSite: process.env.NODE_ENV.trim() === "PROD" ? "none" : undefined,
+    });
+  res.send(lab);
+});
 router.get("/:id", async (req, res) =>
   res.send(await getLaboratory(req.params.id))
 );
@@ -38,7 +62,7 @@ router.patch("/owners", authGuard, async (req: AuthRequest, res) => {
       .send(new ResponseError({ error: "Invalid body format", key: "format" }));
   if (!req.user["sub-lab"] || req.user["sub-lab"] !== labId)
     return res
-      .status(400)
+      .status(403)
       .send(new ResponseError({ error: "Not enough privileges", key: "role" }));
   return res.send(await upsertOwner(owner, labId, type as "ADD" | "REMOVE"));
 });
@@ -50,7 +74,7 @@ router.patch("/users", authGuard, async (req: AuthRequest, res) => {
       .send(new ResponseError({ error: "Invalid body format", key: "format" }));
   if (!req.user["sub-lab"] || req.user["sub-lab"] !== labId)
     return res
-      .status(400)
+      .status(403)
       .send(new ResponseError({ error: "Not enough privileges", key: "role" }));
   if (type === "INVITE") {
     const response = await inviteUser(user, labId);

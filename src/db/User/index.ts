@@ -1,8 +1,9 @@
 import { Prisma, User } from "@prisma/client";
 import { signJWT } from "../../auth/index.js";
+import { getSignedFileUrl } from "../../aws/s3.js";
 import { hash as hashPassword } from "../../crypto/index.js";
 import { NotUnique } from "../../routes/Responses/index.js";
-import { Payload } from "../../types/Auth/index.js";
+import { ResponseError } from "../../types/Responses/error.js";
 import { DefaultSelectMany } from "../../types/select";
 import { isValidObjectID } from "../../utils/index.js";
 import { prisma } from "../handler.js";
@@ -233,5 +234,40 @@ export async function createUser({
     } else {
       console.error(e);
     }
+  }
+}
+
+export async function updateUser(id: string, user: Partial<User>) {
+  try {
+    delete user.hash;
+    delete user.id;
+
+    if (user.profileImg) {
+      if (!user.profileImg.startsWith("https://public-files.s3.filebase.com/"))
+        return new ResponseError({
+          error: "Invalid image storage host",
+          key: "storage",
+        });
+      user.profileImg = await getSignedFileUrl(
+        "public-files",
+        user.profileImg.split("/").reverse()[0],
+        0
+      );
+    }
+
+    return await prisma.user.update({
+      where: { id },
+      data: user,
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        slug: true,
+        profileImg: true,
+      },
+    });
+  } catch (e) {
+    console.error(e);
+    return false;
   }
 }

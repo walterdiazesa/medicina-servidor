@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { login } from "../../auth/index.js";
+import { changePassword, login } from "../../auth/index.js";
 import { AuthRequest } from "../../types/Express/index.js";
 import { ResponseError } from "../../types/Responses/error.js";
 import { authGuard } from "../middlewares/index.js";
@@ -8,6 +8,16 @@ const router = Router();
 
 router.post("/", authGuard, (req: AuthRequest, res) => {
   res.status(200).send(req.user);
+});
+
+router.patch("/password/change", authGuard, async (req: AuthRequest, res) => {
+  const response = await changePassword(
+    req.user["sub"],
+    req.body.newPassword,
+    req.body.oldPassword
+  );
+  if (response instanceof ResponseError) res.status(400);
+  res.send(response);
 });
 
 router.post("/login", async (req, res) => {

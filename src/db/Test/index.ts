@@ -1,6 +1,5 @@
 import { Prisma, Test } from "@prisma/client";
 import axios from "axios";
-import { tests } from "../../mockdata.js";
 import { prisma } from "../handler.js";
 import { emit } from "../../socketio/index.js";
 import { DefaultSelectMany } from "../../types/select.js";

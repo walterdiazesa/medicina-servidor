@@ -25,7 +25,7 @@ router.get("/:id/access", authGuard, async (req: AuthRequest, res) =>
 );
 router.delete("/:id", authGuard, async (req: AuthRequest, res) => {
   const isDeleted = await deleteTest(req.params.id, req.user);
-  if (isDeleted instanceof ResponseError) res.status(401);
+  if (isDeleted instanceof ResponseError) res.status(403);
   res.send(isDeleted);
 });
 router.post("/", listenerGuard, async (req: ListenerRequest, res) => {

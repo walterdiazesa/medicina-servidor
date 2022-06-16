@@ -1,4 +1,5 @@
 import AWSSDK from "aws-sdk";
+import { v4 } from "uuid";
 
 AWSSDK.config.update({
   accessKeyId: process.env.AWS_ACCESS_KEY_ID,
@@ -51,6 +52,22 @@ export const getSignedFileUrl = async (
     });
   } catch (error) {
     console.error({ path: "getSignedFileUrl", error });
+    return null;
+  }
+};
+
+export const getFileUploadUrl = async (
+  Bucket: "public-files",
+  Expires: number
+) => {
+  try {
+    return await s3.getSignedUrlPromise("putObject", {
+      Bucket,
+      Key: v4(),
+      Expires,
+    });
+  } catch (error) {
+    console.error({ path: "getFileUploadUrl", error });
     return null;
   }
 };

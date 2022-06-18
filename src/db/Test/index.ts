@@ -7,6 +7,10 @@ import { ListenerPayload, Payload } from "../../types/Auth/index.js";
 import { parseChem } from "../../Chem/index.js";
 import { ResponseError } from "../../types/Responses/error.js";
 import { isValidObjectID } from "../../utils/index.js";
+import { NotFound } from "../../routes/Responses/index.js";
+import { emailPrivateRsaEncrypt } from "../../crypto/index.js";
+import mailTransport from "../../Mail/index.js";
+import { validateByRequest } from "../../Mail/Templates/validatebyrequest.js";
 
 export async function getTest(id: string) {
   // if (process.env.NODE_ENV.trim() === "DEV") return tests[0];
@@ -55,7 +59,11 @@ export async function getTestAccess(id: string, user: Payload) {
         AND: [
           {
             OR: [
-              { labId: user["sub-lab"] },
+              {
+                labId: !user["sub-lab"].length
+                  ? undefined
+                  : { in: user["sub-lab"] },
+              },
               {
                 lab: {
                   OR: [
@@ -91,7 +99,9 @@ export async function getTests(
     orderBy: { date: order },
     where: {
       OR: [
-        { labId: user["sub-lab"] },
+        {
+          labId: !user["sub-lab"].length ? undefined : { in: user["sub-lab"] },
+        },
         {
           ...(user["sub-user"] && {
             lab: {
@@ -225,11 +235,31 @@ export async function updateTest(
     return new ResponseError({ error: "Invalid field", key: "patientid" });
   if (data.issuerId && !isValidObjectID(data.issuerId))
     return new ResponseError({ error: "Invalid field", key: "issuerid" });
+  if (
+    data.validatorId &&
+    (data.validatorId !== user["sub-user"] ||
+      !isValidObjectID(data.validatorId))
+  )
+    return new ResponseError({ error: "Invalid field", key: "validatorid" });
+
+  if (
+    data.remark &&
+    (!data.remark.hasOwnProperty("by") ||
+      !data.remark.hasOwnProperty("text") ||
+      user.sub !== (data.remark as any).by)
+  )
+    return new ResponseError({
+      error: "Invalid remark format",
+      key: "format",
+    });
 
   /* const select: Prisma.TestSelect = {}
   for (const key of Object.keys(data)) select[key as keyof Test] = true */
   try {
-    const searchTest = await prisma.test.findUnique({ where: { id } });
+    const searchTest = await prisma.test.findUnique({
+      where: { id },
+      select: { patientId: true, issuerId: true, validatorId: true },
+    });
     if (!searchTest)
       return new ResponseError({ error: "Not test found", key: "id" });
 
@@ -250,7 +280,9 @@ export async function updateTest(
       ...((data["issuerId"] || data["patientId"]) && {
         include: {
           ...(data["issuerId"] && {
-            issuer: { select: { name: true, email: true, slug: true } },
+            issuer: {
+              select: { name: true, email: true, slug: true, profileImg: true },
+            },
           }),
           ...(data["patientId"] && {
             patient: {
@@ -291,5 +323,85 @@ export async function updateTest(
   } catch (e) {
     // if (e.code !== "P2016") P2016 = RecordNotFound
     console.error(e);
+  }
+}
+
+export async function requestValidation(
+  requester: Payload,
+  validatorId: string,
+  testId: string
+) {
+  const testPromise = prisma.test.findUnique({
+    where: { id: testId },
+    include: {
+      lab: {
+        select: {
+          name: true,
+          img: true,
+          email: true,
+          ownerIds: true,
+          userIds: true,
+        },
+      },
+    },
+  });
+  const validatorPromise = prisma.user.findUnique({
+    where: { id: validatorId },
+    select: { name: true, email: true },
+  });
+
+  try {
+    const [test, validator] = await Promise.all([
+      testPromise,
+      validatorPromise,
+    ]);
+    if (!test) return NotFound("test");
+    if (!validator) return NotFound("validator");
+    if (test.isDeleted)
+      return new ResponseError({
+        error: "Cannot update a already deleted test",
+        key: "deleted",
+      });
+
+    const testLabList = new Set([
+      test.lab.email,
+      ...test.lab.ownerIds,
+      ...test.lab.userIds,
+    ]);
+    if (
+      !testLabList.has(requester["sub"]) &&
+      !(requester["sub-user"] && !testLabList.has(requester["sub-user"])) &&
+      !requester["sub-lab"].some((lab) => testLabList.has(lab))
+    )
+      return new ResponseError({
+        error:
+          "Can't request a validation on this test with your current privileges",
+        key: "role",
+      });
+
+    if (!testLabList.has(validatorId))
+      return new ResponseError({
+        error: "The requested validator doesn't have permissions for that test",
+        key: "role",
+      });
+
+    const validationByRequestHash = emailPrivateRsaEncrypt(
+      JSON.stringify({ validatorId, testId, expires: Date.now() + 259_200_000 })
+    );
+
+    await mailTransport.sendMail({
+      from: `"Flemik 🧪" <${process.env.MAILER_USERNAME.trim().split("|")[1]}>`,
+      to: validator.email,
+      subject: `"${test.lab.name}" te ha solicitado una validación`,
+      html: validateByRequest({ test, validator, validationByRequestHash }),
+    });
+
+    return true;
+  } catch (e) {
+    console.error(e);
+    return new ResponseError({
+      error: "Something went wrong",
+      key: e.message.toLowerCase(),
+    });
   }
 }

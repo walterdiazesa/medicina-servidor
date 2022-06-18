@@ -28,15 +28,13 @@ router.patch("/me", authGuard, async (req: AuthRequest, res) => {
         key: "role",
       })
     );
-  const lastPayloadImg = req.user.img;
+  // const lastPayloadImg = req.user.img;
   const user = await updateUser(req.user["sub-user"], req.body);
   if (user instanceof ResponseError) res.status(400);
   else if (
     user &&
     req.body.profileImg &&
-    (!req.user.img ||
-      !req.user["sub-lab"] ||
-      (lastPayloadImg && lastPayloadImg !== user.profileImg))
+    (!req.user.img || req.user["sub-lab"].length !== 1) // || (lastPayloadImg && lastPayloadImg !== user.profileImg)
   )
     res.cookie("session", signJWT({ ...req.user, img: user.profileImg }), {
       httpOnly: true,
@@ -46,14 +44,28 @@ router.patch("/me", authGuard, async (req: AuthRequest, res) => {
   res.send(user);
 });
 router.get(["/", "/:lab"], authGuard, async (req: AuthRequest, res) => {
-  if (!req.user["sub-lab"])
+  if (!req.user["sub-lab"].length)
     return res.status(403).send(
       new ResponseError({
         error: "Not a lab owner",
         key: "lab",
       })
     );
-  req.query.labId = req.user["sub-lab"];
+  if (!req.params.lab && req.user["sub-lab"].length !== 1)
+    return res.status(400).send(
+      new ResponseError({
+        error: "In case you own many labs, you have to specify an identifier",
+        key: "identifier",
+      })
+    );
+  if (req.params.lab && !req.user["sub-lab"].includes(req.params.lab))
+    return res.status(403).send(
+      new ResponseError({
+        error: "Not enough privileges",
+        key: "role",
+      })
+    );
+  req.query.labId = req.params.lab || req.user["sub-lab"][0];
   res.send(await getUsers(req.query));
 });
 router.get("/:lab/:employee", authGuard, async (req: AuthRequest, res) => {
@@ -64,7 +76,7 @@ router.get("/:lab/:employee", authGuard, async (req: AuthRequest, res) => {
   if (
     ![
       ...authLabs.map(({ id }: { id: string }) => id),
-      req.user["sub-lab"],
+      ...req.user["sub-lab"],
     ].includes(req.params.lab)
   )
     return res.status(403).send(

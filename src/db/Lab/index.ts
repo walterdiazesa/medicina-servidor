@@ -30,16 +30,46 @@ const labPublicSelect: Prisma.LabSelect = {
   img: true,
 };
 
-export async function getLaboratory(lab: string) {
-  return isValidObjectID(lab)
-    ? await prisma.lab.findUnique({
-        where: { id: lab },
-        select: labPublicSelect,
-      })
-    : await prisma.lab.findFirst({
-        where: { OR: [{ email: lab }, { name: lab }] },
-        select: labPublicSelect,
-      });
+export async function getLaboratory(
+  lab: string[],
+  includeEmployeeInfo?: boolean
+) {
+  const userInfo: Prisma.UserSelect = {
+    id: true,
+    email: true,
+    name: true,
+    slug: true,
+  };
+  const select: Prisma.LabSelect = {
+    ...labPublicSelect,
+    ...(includeEmployeeInfo && {
+      Owners: {
+        orderBy: { name: "asc" },
+        distinct: ["id"],
+        select: userInfo,
+      },
+      Users: {
+        orderBy: { name: "asc" },
+        distinct: ["id"],
+        select: userInfo,
+      },
+    }),
+  };
+  if (lab.length > 1) {
+    return await prisma.lab.findMany({
+      where: { id: { in: lab } },
+      select,
+    });
+  }
+  return isValidObjectID(lab[0])
+    ? ((await prisma.lab.findUnique({
+        where: { id: lab[0] },
+        select,
+      })) as Lab)
+    : ((await prisma.lab.findFirst({
+        where: { OR: [{ email: lab[0] }, { name: lab[0] }] },
+        select,
+      })) as Lab);
 }
 
 export async function getLaboratories(
@@ -62,7 +92,7 @@ export async function getLaboratories(
     orderBy: { id: order },
     where: {
       OR: [
-        { id: labFromUser ? user["sub-lab"] : undefined },
+        { id: labFromUser ? { in: user["sub-lab"] } : undefined },
         { ownerIds: user["sub-user"] ? { has: user["sub-user"] } : undefined },
         { userIds: user["sub-user"] ? { has: user["sub-user"] } : undefined },
       ],

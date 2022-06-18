@@ -140,7 +140,7 @@ if (cluster.isPrimary) {
       if (!user) return socket.disconnect();
 
       const userRooms: string[] = [];
-      if (user["sub-lab"]) userRooms.push(user["sub-lab"]);
+      if (user["sub-lab"].length) userRooms.push(...user["sub-lab"]);
       if (user["sub-user"]) userRooms.push(user["sub-user"]);
       getLaboratories({ fields: { id: true }, labFromUser: false }, user).then(
         async (queryLabs) => {

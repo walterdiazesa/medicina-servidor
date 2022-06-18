@@ -60,23 +60,26 @@ export const login = async (
       });
   const [user, lab] = await Promise.all([userPromise, labPromise]);
 
-  const payload: { [id: string]: string | Object } = {};
+  const payload: { [id: string]: string | Object } = { "sub-lab": [] };
 
   if (user && (ignorePassword || (await verifyPassword(user.hash, password))))
     payload["sub-user"] = user.id;
   if (lab && (ignorePassword || (await verifyPassword(lab.hash, password))))
-    payload["sub-lab"] = lab.id;
+    payload["sub-lab"] = [lab.id];
 
+  let isLabAndImg;
   if (user && !lab) {
     const labFromEmail = await prisma.lab.findUnique({
       where: { email: user.email },
-      select: { id: true, hash: true },
+      select: { id: true, hash: true, img: true },
     });
     if (
       labFromEmail &&
       (ignorePassword || (await verifyPassword(labFromEmail.hash, password)))
-    )
-      payload["sub-lab"] = labFromEmail.id;
+    ) {
+      payload["sub-lab"] = [labFromEmail.id];
+      isLabAndImg = labFromEmail.img;
+    }
   } else if (lab && !user && _isValidObjectID) {
     const userFromEmail = await prisma.user.findUnique({
       where: { email: lab.email },
@@ -89,11 +92,26 @@ export const login = async (
       payload["sub-user"] = userFromEmail.id;
   }
 
+  if (payload["sub-user"]) {
+    // GET LabOwners
+    const labsWhoOwn = await prisma.lab.findMany({
+      where: { ownerIds: { has: payload["sub-user"] as string } },
+      select: { id: true },
+    });
+    if (labsWhoOwn && labsWhoOwn.length) {
+      (payload["sub-lab"] as string[]).push(...labsWhoOwn.map(({ id }) => id));
+      payload["sub-lab"] = Array.from(new Set(payload["sub-lab"] as string[]));
+    }
+  }
+
   if (!Object.keys(payload).length)
     return new ResponseError({ error: "Inválid auth", key: "auth" });
 
   payload["sub"] = user?.email || lab?.email;
-  payload["img"] = lab?.img || user?.profileImg;
+  payload["img"] =
+    lab?.img ||
+    ((payload["sub-lab"] as string[]).length === 1 && isLabAndImg) ||
+    user?.profileImg;
 
   return { access_token: signJWT(payload), payload };
 };
@@ -116,9 +134,12 @@ export async function changePassword(
           data: { hash },
         })
       );
-    if (payload["sub-lab"])
+    if (payload["sub-lab"].length)
       updatePassAccounts.push(
-        prisma.lab.update({ where: { id: payload["sub-lab"] }, data: { hash } })
+        prisma.lab.updateMany({
+          where: { id: { in: payload["sub-lab"] } },
+          data: { hash },
+        })
       );
     await Promise.allSettled(updatePassAccounts);
     return true;

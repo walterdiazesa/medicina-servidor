@@ -14,12 +14,15 @@ model Test {
   id       String    @id @default(auto()) @map("_id") @db.ObjectId
   lab      Lab      @relation(fields: [labId], references: [id])
   issuer User? @relation(fields: [issuerId], references: [id])
+  validator User? @relation("validator", fields: [validatorId], references: [id])
   patient  Patient?  @relation(fields: [patientId], references: [id])
   sex      String
   tests    Json
+  remark Json?
   date   DateTime
   labId String    @db.ObjectId
   issuerId String?    @db.ObjectId
+  validatorId String?    @db.ObjectId
   patientId String?    @db.ObjectId
   listenerRequest  ListenerRequest?
   isDeleted Boolean @default(false)
@@ -86,4 +89,5 @@ model User {
   ownerIds String[] @db.ObjectId
   Owners Lab[] @relation("owners", fields: [ownerIds], references: [id])
   Test Test[]
+  Validator Test[] @relation("validator")
 }

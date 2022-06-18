@@ -16,13 +16,7 @@ export const registerByInvite = ({
 <body>
     <div style="background-color: #e5e7eb; padding: 8px; border-radius: 2px; text-align: center;">
     <div style="border-radius: 8px; background-color: #fff; padding: 16px; text-align: center; max-width: 384px; margin-left: auto; margin-right: auto; padding-bottom: 20px;">
-      <img src="${
-        process.env.NODE_ENV.trim() === "DEV"
-          ? "http://localhost:3000"
-          : process.env.APP_HOST.trim()
-      }/_next/image?url=${encodeURIComponent(
-    img
-  )}&w=750&q=75" style="width: 288px; margin-bottom: 12px; margin-left: auto; margin-right: auto;" />
+      <img src="${img}" style="width: 288px; margin-bottom: 12px; margin-left: auto; margin-right: auto;" />
       <h1 style="font-weight: 600; color: #374151; margin: 0;">¡&quot;<span style="color: #14b8a6;">${name}</span>&quot; te ha invitado a su laboratorio!</h1>
       <p style="color: #6b7280; margin-bottom: 18px;">Es un gusto tenerte en <span style="color: #fb923c; font-weight: 600;">Flemik</span>, somos un sistema completo de administración de laboratorios y en este caso has recibido una invitación para formar parte de este laboratorio, si no reconoces esta invitación puedes hacer caso omiso, en caso contrario solo <span style="font-weight: 700;">deberás clickear el botón de abajo</span> que lleva a nuestra página web con un formulario rápido de registro, en el que definirás tus nuevas credenciales para este y cualquier otro laboratorio en un futuro, ¡Esperamos tenerte con nosotros mucho tiempo!</p>
       <a href="${

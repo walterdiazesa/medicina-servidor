@@ -65,7 +65,6 @@ if (cluster.isPrimary) {
   //#region CORS
   const corsOptions = (req: Request, callback: any) => {
     let corsOptions: cors.CorsOptions = { origin: false, credentials: true };
-    console.log({ corsWhiteList, origin: req.headers.origin });
     const isDomainAllowed = corsWhiteList.includes(req.headers.origin); // ["GET", "PUT"].includes(req.method) &&
     const isOperationAllowed = (path: string, method: string) => {
       if (!isDomainAllowed) {

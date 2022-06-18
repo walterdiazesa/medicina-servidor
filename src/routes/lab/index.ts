@@ -47,6 +47,7 @@ router.patch("/owners", authGuard, async (req: AuthRequest, res) => {
   return res.send(await upsertOwner(owner, labId, type as "ADD" | "REMOVE"));
 });
 router.patch("/users", authGuard, async (req: AuthRequest, res) => {
+  console.log("Up here in /labs/users!");
   const { labId, user, type }: { [key: string]: string } = req.body;
   if (!labId || !user)
     return res

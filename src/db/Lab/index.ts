@@ -310,7 +310,6 @@ export async function inviteUser(user: string, labId: string) {
     return { ...alreadyInApp, owner: false };
   }
 
-  console.log("Before emailPrivateRsaEncrypt on /labs/users!");
   const invitationHash = emailPrivateRsaEncrypt(
     JSON.stringify({ email: user, labId, expires: Date.now() + 259_200_000 })
   );

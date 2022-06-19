@@ -20,6 +20,7 @@ model Test {
   tests    Json
   remark Json?
   date   DateTime
+  validated   DateTime?
   labId String    @db.ObjectId
   issuerId String?    @db.ObjectId
   validatorId String?    @db.ObjectId

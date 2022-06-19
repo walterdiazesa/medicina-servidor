@@ -45,6 +45,14 @@ export async function getTest(id: string) {
           email: true,
         },
       },
+      validator: {
+        select: {
+          name: true,
+          profileImg: true,
+          slug: true,
+          email: true,
+        },
+      },
     },
   });
 }
@@ -343,6 +351,17 @@ export async function requestValidation(
           userIds: true,
         },
       },
+      issuer: { select: { name: true, email: true } },
+      patient: {
+        select: {
+          name: true,
+          email: true,
+          dui: true,
+          sex: true,
+          dateBorn: true,
+          phone: true,
+        },
+      },
     },
   });
   const validatorPromise = prisma.user.findUnique({
@@ -401,6 +420,43 @@ export async function requestValidation(
     console.error(e);
     return new ResponseError({
       error: "Something went wrong",
+      key: e.message.toLowerCase(),
+    });
+  }
+}
+
+export async function validateTest(id: string, validatorId: string) {
+  try {
+    await prisma.test.update({
+      data: { validatorId, validated: new Date() },
+      where: { id },
+    });
+
+    return () =>
+      axios
+        .get(`${process.env.APP_HOST}/api/revalidatetest`, {
+          params: {
+            test: id,
+            revalidate_token: process.env.REVALIDATE_TOKEN,
+          },
+        })
+        .then(({ status }) => {
+          if (status === 500)
+            console.error(`revalidation on /tests/${id} failed!`);
+          if (status === 401)
+            console.error(`invalid token for revalidating /tests/${id}`);
+        })
+        .catch((e) => {
+          if (e.response.status === 500)
+            console.error(`revalidation on /tests/${id} failed!`);
+          if (e.response.status === 401)
+            console.error(`invalid token for revalidating /tests/${id}`);
+        });
+  } catch (e) {
+    // if (e.code !== "P2016") P2016 = RecordNotFound
+    console.error(e);
+    return new ResponseError({
+      error: "Uncatched error",
       key: e.message.toLowerCase(),
     });
   }

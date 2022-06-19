@@ -87,12 +87,20 @@ export const revealSecret = (safe: string) => {
 const AES_ALGORITHM = "aes-256-cbc";
 
 export const emailPrivateRsaEncrypt = (data: string) => {
+  console.log(
+    "emailPrivateRsaEncrypt PEM",
+    process.env.PRIVATE_EMAIL_RSA_KEY.trim()
+  );
   return crypto
     .privateEncrypt(process.env.PRIVATE_EMAIL_RSA_KEY.trim(), Buffer.from(data))
     .toString("hex");
 };
 
 export const emailPublicRsaDecrypt = (encryptedData: string) => {
+  console.log(
+    "emailPublicRsaDecrypt PEM",
+    process.env.PRIVATE_EMAIL_RSA_KEY.trim()
+  );
   try {
     return crypto
       .publicDecrypt(

@@ -9,6 +9,7 @@ import { signJWT } from "../../auth/index.js";
 import { Lab, Prisma } from "@prisma/client";
 import { isValidObjectID } from "../../utils/index.js";
 import { Payload } from "../../types/Auth";
+import { LabPreferences } from "../../types/Lab";
 import { generateListener } from "../../pkg/index.js";
 import { emit } from "../../socketio/index.js";
 import { getSignedFileUrl } from "../../aws/s3.js";
@@ -28,11 +29,13 @@ const labPublicSelect: Prisma.LabSelect = {
   web: true,
   publicEmail: true,
   img: true,
+  preferences: true,
 };
 
 export async function getLaboratory(
   lab: string[],
-  includeEmployeeInfo?: boolean
+  includeEmployeeInfo?: boolean,
+  fields?: Prisma.LabSelect
 ) {
   const userInfo: Prisma.UserSelect = {
     id: true,
@@ -40,7 +43,11 @@ export async function getLaboratory(
     name: true,
     slug: true,
   };
-  const select: Prisma.LabSelect = {
+  if (fields) {
+    if (fields.hash) fields.hash = false;
+    if (fields.rsaPrivateKey) fields.rsaPrivateKey = false;
+  }
+  const select: Prisma.LabSelect = fields || {
     ...labPublicSelect,
     ...(includeEmployeeInfo && {
       Owners: {
@@ -151,6 +158,10 @@ export async function createLaboratory({
         img,
         installer: "generating",
         rsaPrivateKey: "generating",
+        preferences: {
+          useTestCustomId: true,
+          leadingZerosWhenCustomId: 6,
+        },
       },
       select: {
         id: true,
@@ -395,22 +406,46 @@ export async function updateLab(id: string, lab: Partial<Lab>) {
     delete lab.rsaPrivateKey;
     delete lab.userIds;
 
-    if (lab.img) {
-      if (!lab.img.startsWith("https://public-files.s3.filebase.com/"))
+    if (lab.preferences) {
+      if (
+        (lab.preferences as LabPreferences).leadingZerosWhenCustomId &&
+        ((lab.preferences as LabPreferences).leadingZerosWhenCustomId < 0 ||
+          (lab.preferences as LabPreferences).leadingZerosWhenCustomId >
+            "2147483647".length)
+      )
         return new ResponseError({
-          error: "Invalid image storage host",
-          key: "storage",
+          error: "Invalid leadingZerosWhenCustomId property > Outside bounds",
+          key: "preferences",
         });
-      lab.img = await getSignedFileUrl(
-        "public-files",
-        lab.img.split("/").reverse()[0],
-        0
-      );
+      if ((lab.preferences as LabPreferences).useTestCustomId !== undefined)
+        (lab.preferences as LabPreferences).useTestCustomId = !!(
+          lab.preferences as LabPreferences
+        ).useTestCustomId;
+      if (!Object.keys(lab.preferences).length) lab.preferences = undefined;
     }
+
+    if (lab.img && !lab.img.startsWith("https://public-files.s3.filebase.com/"))
+      return new ResponseError({
+        error: "Invalid image storage host",
+        key: "storage",
+      });
 
     return (await prisma.lab.update({
       where: { id },
-      data: lab,
+      data: {
+        ...lab,
+        ...(lab.preferences && {
+          preferences: {
+            ...((
+              await prisma.lab.findUnique({
+                where: { id },
+                select: { preferences: true },
+              })
+            ).preferences as LabPreferences),
+            ...(lab.preferences as LabPreferences),
+          },
+        }),
+      },
       select: labPublicSelect,
     })) as Lab;
   } catch (e) {

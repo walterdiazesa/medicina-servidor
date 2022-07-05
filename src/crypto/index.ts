@@ -1,7 +1,7 @@
 import argon2 from "argon2";
 import crypto from "crypto";
 
-const argon2Options = Object.freeze({
+const argon2PasswordOptions = Object.freeze({
   saltLength: 128,
   type: argon2.argon2id,
   hashLength: 64,
@@ -10,9 +10,9 @@ const argon2Options = Object.freeze({
 });
 
 export const hash = async (text: string) =>
-  await argon2.hash(text, argon2Options);
+  await argon2.hash(text, argon2PasswordOptions);
 export const verify = async (hash: string, text: string) =>
-  await argon2.verify(hash, text, argon2Options);
+  await argon2.verify(hash, text, argon2PasswordOptions);
 
 /*
 const CRYPTO_ALGORITHM = "aes-256-ctr";
@@ -138,4 +138,33 @@ export const listenerAesRSAKeyDecrypt = (
   ]);
 
   return decrypted.toString();
+};
+
+const argon2TestsQROptions = Object.freeze({
+  saltLength: 8,
+  type: argon2.argon2id,
+  hashLength: 8,
+  secret: Buffer.from(process.env.HASH_QR_SECRET),
+  timeCost: 8,
+});
+
+export const qrAccess = async (text: string) =>
+  Buffer.from(
+    (await argon2.hash(text, argon2TestsQROptions)).replace(
+      "$argon2id$v=19$m=4096,t=8,p=1$",
+      ""
+    )
+  ).toString("base64url");
+export const qrVerify = async (hash: string, text: string) => {
+  try {
+    return await argon2.verify(
+      `$argon2id$v=19$m=4096,t=8,p=1$${Buffer.from(hash, "base64url").toString(
+        "utf8"
+      )}`,
+      text,
+      argon2TestsQROptions
+    );
+  } catch (e) {
+    return false;
+  }
 };

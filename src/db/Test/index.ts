@@ -19,12 +19,14 @@ export async function getTest(id: string) {
     include: {
       lab: {
         select: {
+          id: true,
           name: true,
           address: true,
           img: true,
           publicEmail: true,
           publicPhone: true,
           web: true,
+          preferences: true,
         },
       },
       patient: {
@@ -128,7 +130,7 @@ export async function getTests(
         select: { name: true },
       },
       patient: {
-        select: { dui: true },
+        select: { dui: true, name: true, phone: true, email: true },
       },
     },
   });
@@ -154,6 +156,8 @@ export async function createTest(
       ...parsedChemData,
       date: new Date(),
       labId: listener.labId,
+      customId:
+        (await prisma.test.count({ where: { labId: listener.labId } })) + 1,
     },
   });
   prisma.listenerRequest
@@ -260,6 +264,21 @@ export async function updateTest(
       error: "Invalid remark format",
       key: "format",
     });
+  else if (data.remark) {
+    if (user["sub-user"]) {
+      const { name } = await prisma.user.findUnique({
+        where: { id: user["sub-user"] },
+        select: { name: true },
+      });
+      (data.remark as any).by = name;
+    } else {
+      const { name } = await prisma.lab.findUnique({
+        where: { id: user["sub-lab"][0] },
+        select: { name: true },
+      });
+      (data.remark as any).by = name;
+    }
+  }
 
   /* const select: Prisma.TestSelect = {}
   for (const key of Object.keys(data)) select[key as keyof Test] = true */
@@ -281,14 +300,26 @@ export async function updateTest(
         error: "Cannot update a issuer after being setted",
         key: "issuerid",
       });
+    if (data.validatorId && searchTest.validatorId)
+      return new ResponseError({
+        error: "Cannot update a validator after being setted",
+        key: "validatorid",
+      });
+
+    if (data.validatorId) data.validated = new Date();
 
     const test = await prisma.test.update({
       data,
       where: { id },
-      ...((data["issuerId"] || data["patientId"]) && {
+      ...((data["issuerId"] || data["patientId"] || data["validatorId"]) && {
         include: {
           ...(data["issuerId"] && {
             issuer: {
+              select: { name: true, email: true, slug: true, profileImg: true },
+            },
+          }),
+          ...(data["validatorId"] && {
+            validator: {
               select: { name: true, email: true, slug: true, profileImg: true },
             },
           }),

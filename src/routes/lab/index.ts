@@ -13,22 +13,48 @@ import { AuthRequest } from "../../types/Express/index.js";
 import { ResponseError } from "../../types/Responses/error.js";
 import { isValidObjectID } from "../../utils/index.js";
 import { authGuard } from "../middlewares/index.js";
+import { qrAccess, qrVerify } from "../../crypto/index.js";
 
 const router = Router();
 
 router.get("/", authGuard, async (req: AuthRequest, res) =>
   res.send(await getLaboratories(req.query, req.user))
 );
-router.get("/mine", authGuard, async (req: AuthRequest, res) => {
+router.get(["/mine", "/mine/:id"], authGuard, async (req: AuthRequest, res) => {
   if (!req.user["sub-lab"].length)
     return res
       .status(403)
       .send(new ResponseError({ error: "Not a lab user", key: "role" }));
+  if (!req.params.id)
+    return res.send(
+      await getLaboratory(
+        req.user["sub-lab"],
+        Boolean(req.query.includeEmployeeInfo)
+      )
+    );
+  if (!req.user["sub-lab"].includes(req.params.id))
+    return res
+      .status(403)
+      .send(
+        new ResponseError({ error: "Not a user from this lab", key: "role" })
+      );
   res.send(
-    await getLaboratory(
-      req.user["sub-lab"],
-      Boolean(req.query.includeEmployeeInfo)
-    )
+    await getLaboratory([req.params.id], false, req.query.fields as any)
+  );
+});
+router.get("/mine/:id/:access/:test", async (req: AuthRequest, res) => {
+  if (
+    !req.params.access ||
+    !req.params.test ||
+    !(await qrVerify(req.params.access, req.params.test))
+  )
+    return res
+      .status(403)
+      .send(
+        new ResponseError({ error: "Not a valid access hash", key: "hash" })
+      );
+  res.send(
+    await getLaboratory([req.params.id], false, req.query.fields as any)
   );
 });
 router.get("/:id", async (req, res) =>

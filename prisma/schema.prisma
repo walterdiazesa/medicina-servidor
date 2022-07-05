@@ -12,6 +12,7 @@ datasource db {
 
 model Test {
   id       String    @id @default(auto()) @map("_id") @db.ObjectId
+  customId Int @default(1)
   lab      Lab      @relation(fields: [labId], references: [id])
   issuer User? @relation(fields: [issuerId], references: [id])
   validator User? @relation("validator", fields: [validatorId], references: [id])
@@ -42,7 +43,7 @@ model ListenerRequest {
   test      Test      @relation(fields: [testId], references: [id])
   ip  String
   reqUsername String
-  testId String    @db.ObjectId
+  testId String    @db.ObjectId @unique
 }
 
 model Patient {
@@ -69,6 +70,7 @@ model Lab {
   img   String
   installer String?
   rsaPrivateKey String
+  preferences Json
   createdAt DateTime @default(now())
   userIds String[]   @db.ObjectId
   ownerIds String[]   @db.ObjectId

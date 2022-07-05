@@ -242,18 +242,14 @@ export async function updateUser(id: string, user: Partial<User>) {
     delete user.hash;
     delete user.id;
 
-    if (user.profileImg) {
-      if (!user.profileImg.startsWith("https://public-files.s3.filebase.com/"))
-        return new ResponseError({
-          error: "Invalid image storage host",
-          key: "storage",
-        });
-      user.profileImg = await getSignedFileUrl(
-        "public-files",
-        user.profileImg.split("/").reverse()[0],
-        0
-      );
-    }
+    if (
+      user.profileImg &&
+      !user.profileImg.startsWith("https://public-files.s3.filebase.com/")
+    )
+      return new ResponseError({
+        error: "Invalid image storage host",
+        key: "storage",
+      });
 
     return await prisma.user.update({
       where: { id },

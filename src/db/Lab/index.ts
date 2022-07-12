@@ -12,12 +12,10 @@ import { Payload } from "../../types/Auth";
 import { LabPreferences } from "../../types/Lab";
 import { generateListener } from "../../pkg/index.js";
 import { emit } from "../../socketio/index.js";
-import { getSignedFileUrl } from "../../aws/s3.js";
+import { getSignedFileUrl, LISTENER_SIGNED_URL_EXPIRE } from "../../aws/s3.js";
 import { ResponseError } from "../../types/Responses/error.js";
 import mailTransport from "../../Mail/index.js";
 import { registerByInvite } from "../../Mail/Templates/registerbyinvite.js";
-
-const LISTENER_SIGNED_URL_EXPIRE = 3600;
 
 const labPublicSelect: Prisma.LabSelect = {
   id: true,
@@ -31,6 +29,12 @@ const labPublicSelect: Prisma.LabSelect = {
   img: true,
   preferences: true,
 };
+
+const LAB_PREFERENCES: LabPreferences = Object.freeze({
+  useTestCustomId: true,
+  leadingZerosWhenCustomId: 6,
+  useQR: true,
+});
 
 export async function getLaboratory(
   lab: string[],
@@ -112,7 +116,7 @@ export async function getLaboratories(
       const labInstaller = lab["installer"];
       if (labInstaller && labInstaller !== "generating")
         lab["installer"] = await getSignedFileUrl(
-          labInstaller.split("/")[0],
+          "listener",
           labInstaller.split("/")[1],
           LISTENER_SIGNED_URL_EXPIRE
         );
@@ -158,10 +162,7 @@ export async function createLaboratory({
         img,
         installer: "generating",
         rsaPrivateKey: "generating",
-        preferences: {
-          useTestCustomId: true,
-          leadingZerosWhenCustomId: 6,
-        },
+        preferences: LAB_PREFERENCES,
       },
       select: {
         id: true,
@@ -182,7 +183,7 @@ export async function createLaboratory({
         where: { id: lab.id },
       });
       const signedUrl = await getSignedFileUrl(
-        listenerKey.split("/")[0],
+        "listener",
         listenerKey.split("/")[1],
         LISTENER_SIGNED_URL_EXPIRE
       );
@@ -421,6 +422,10 @@ export async function updateLab(id: string, lab: Partial<Lab>) {
         (lab.preferences as LabPreferences).useTestCustomId = !!(
           lab.preferences as LabPreferences
         ).useTestCustomId;
+      if ((lab.preferences as LabPreferences).useQR !== undefined)
+        (lab.preferences as LabPreferences).useQR = !!(
+          lab.preferences as LabPreferences
+        ).useQR;
       if (!Object.keys(lab.preferences).length) lab.preferences = undefined;
     }
 
@@ -436,12 +441,7 @@ export async function updateLab(id: string, lab: Partial<Lab>) {
         ...lab,
         ...(lab.preferences && {
           preferences: {
-            ...((
-              await prisma.lab.findUnique({
-                where: { id },
-                select: { preferences: true },
-              })
-            ).preferences as LabPreferences),
+            ...LAB_PREFERENCES,
             ...(lab.preferences as LabPreferences),
           },
         }),

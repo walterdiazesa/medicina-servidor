@@ -20,4 +20,5 @@ export type Lab = {
 export type LabPreferences = {
   useTestCustomId: boolean;
   leadingZerosWhenCustomId: number;
+  useQR: boolean;
 };

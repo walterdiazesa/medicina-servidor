@@ -60,7 +60,7 @@ export const login = async (
       });
   const [user, lab] = await Promise.all([userPromise, labPromise]);
 
-  const payload: { [id: string]: string | Object } = { "sub-lab": [] };
+  const payload: { [id: string]: string | Object } = {};
 
   if (user && (ignorePassword || (await verifyPassword(user.hash, password))))
     payload["sub-user"] = user.id;
@@ -105,7 +105,7 @@ export const login = async (
   }
 
   if (!Object.keys(payload).length)
-    return new ResponseError({ error: "Inválid auth", key: "auth" });
+    return new ResponseError({ error: "Invalid auth", key: "auth" });
 
   payload["sub"] = user?.email || lab?.email;
   payload["img"] =

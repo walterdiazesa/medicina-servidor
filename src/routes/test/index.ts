@@ -1,5 +1,9 @@
 import { Router } from "express";
-import { emailPublicRsaDecrypt } from "../../crypto/index.js";
+import {
+  emailPublicRsaDecrypt,
+  qrAccess,
+  qrVerify,
+} from "../../crypto/index.js";
 import { prisma } from "../../db/handler.js";
 import {
   getTests,
@@ -11,12 +15,13 @@ import {
   createChemTest,
   requestValidation,
   validateTest,
+  getTestValidatorSignatures,
 } from "../../db/Test/index.js";
 import { AuthRequest, ListenerRequest } from "../../types/Express/index.js";
 import { ResponseError } from "../../types/Responses/error.js";
 import { isValidObjectID } from "../../utils/index.js";
 import { authGuard, listenerGuard } from "../middlewares/index.js";
-import { NotFound } from "../Responses/index.js";
+import { InvalidFormat, NotFound } from "../Responses/index.js";
 import {
   onTestAlreadyValidated,
   onTestPageRevalidation,
@@ -35,6 +40,65 @@ router.get("/:id", async (req, res) => res.send(await getTest(req.params.id)));
 router.get("/:id/access", authGuard, async (req: AuthRequest, res) =>
   res.send(await getTestAccess(req.params.id, req.user))
 );
+router.get(
+  "/:id/validator_signatures",
+  authGuard,
+  async (req: AuthRequest, res) => {
+    const testSignatures = await getTestValidatorSignatures(
+      req.params.id,
+      req.user
+    );
+    if (testSignatures instanceof ResponseError) res.status(403);
+    res.send(testSignatures);
+  }
+);
+router.get("/:id/validator_signatures/:access", async (req, res) => {
+  if (
+    !req.params.access ||
+    !req.params.id ||
+    !(await qrVerify(req.params.access, req.params.id))
+  )
+    return res
+      .status(403)
+      .send(
+        new ResponseError({ error: "Not a valid access hash", key: "hash" })
+      );
+  const testSignatures = await getTestValidatorSignatures(req.params.id);
+  if (testSignatures instanceof ResponseError) res.status(403);
+  res.send(testSignatures);
+});
+router.get("/:id/access_link", authGuard, async (req: AuthRequest, res) => {
+  if (!(await getTestAccess(req.params.id, req.user)))
+    return res.status(403).send(
+      new ResponseError({
+        error: "Not enough permissions for this action",
+        key: "role",
+      })
+    );
+  const accessLink = await qrAccess(req.params.id);
+  res.send(
+    `${
+      process.env.NODE_ENV.trim() === "DEV"
+        ? "http://localhost:3000"
+        : "https://flemik.com"
+    }/test/${req.params.id}?access=${accessLink}`
+  );
+});
+/* router.get("/:id/access_link/:access", async (req: AuthRequest, res) => {
+  if (
+    !req.params.access ||
+    !req.params.id ||
+    !(await qrVerify(req.params.access, req.params.id))
+  )
+    return res
+      .status(403)
+      .send(
+        new ResponseError({ error: "Not a valid access hash", key: "hash" })
+      );
+  res.send(
+    await getLaboratory([req.params.id], false, req.query.fields as any)
+  );
+}); */
 router.delete("/:id", authGuard, async (req: AuthRequest, res) => {
   const isDeleted = await deleteTest(req.params.id, req.user);
   if (isDeleted instanceof ResponseError) res.status(403);
@@ -63,7 +127,7 @@ router.post("/chem/", listenerGuard, async (req: ListenerRequest, res) => {
 
 router.patch("/:id", authGuard, async (req: AuthRequest, res) => {
   if (!isValidObjectID(req.params.id))
-    return res.status(404).send(NotFound("id"));
+    return res.status(404).send(NotFound("test"));
   const test = await updateTest(req.params.id, req.body, req.user);
   if (test instanceof ResponseError) res.status(401);
   res.send(test);
@@ -73,14 +137,9 @@ router.put(
   authGuard,
   async (req: AuthRequest, res) => {
     if (!isValidObjectID(req.params.id))
-      return res.status(404).send(NotFound("id"));
+      return res.status(404).send(NotFound("test"));
     if (!isValidObjectID(req.params.validator))
-      return res.status(400).send(
-        new ResponseError({
-          error: "Invalid validator id",
-          key: "validatorid",
-        })
-      );
+      return res.status(400).send(InvalidFormat("validator id"));
     const test = await requestValidation(
       req.user,
       req.params.validator,

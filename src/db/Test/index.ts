@@ -7,10 +7,18 @@ import { ListenerPayload, Payload } from "../../types/Auth/index.js";
 import { parseChem } from "../../Chem/index.js";
 import { ResponseError } from "../../types/Responses/error.js";
 import { isValidObjectID } from "../../utils/index.js";
-import { NotFound } from "../../routes/Responses/index.js";
+import {
+  InvalidFormat,
+  NotEditable,
+  NotFound,
+} from "../../routes/Responses/index.js";
 import { emailPrivateRsaEncrypt } from "../../crypto/index.js";
 import mailTransport from "../../Mail/index.js";
 import { validateByRequest } from "../../Mail/Templates/validatebyrequest.js";
+import {
+  getSignedFileUrl,
+  SIGNATURES_SIGNED_URL_EXPIRE,
+} from "../../aws/s3.js";
 
 export async function getTest(id: string) {
   // if (process.env.NODE_ENV.trim() === "DEV") return tests[0];
@@ -53,6 +61,8 @@ export async function getTest(id: string) {
           profileImg: true,
           slug: true,
           email: true,
+          signature: true,
+          stamp: true,
         },
       },
     },
@@ -244,15 +254,15 @@ export async function updateTest(
     });
   if (data.id) delete data.id;
   if (data.patientId && !isValidObjectID(data.patientId))
-    return new ResponseError({ error: "Invalid field", key: "patientid" });
+    return InvalidFormat("patientid");
   if (data.issuerId && !isValidObjectID(data.issuerId))
-    return new ResponseError({ error: "Invalid field", key: "issuerid" });
+    return InvalidFormat("issuerid");
   if (
     data.validatorId &&
     (data.validatorId !== user["sub-user"] ||
       !isValidObjectID(data.validatorId))
   )
-    return new ResponseError({ error: "Invalid field", key: "validatorid" });
+    return InvalidFormat("validatorid");
 
   if (
     data.remark &&
@@ -260,10 +270,7 @@ export async function updateTest(
       !data.remark.hasOwnProperty("text") ||
       user.sub !== (data.remark as any).by)
   )
-    return new ResponseError({
-      error: "Invalid remark format",
-      key: "format",
-    });
+    return InvalidFormat("remark");
   else if (data.remark) {
     if (user["sub-user"]) {
       const { name } = await prisma.user.findUnique({
@@ -287,24 +294,12 @@ export async function updateTest(
       where: { id },
       select: { patientId: true, issuerId: true, validatorId: true },
     });
-    if (!searchTest)
-      return new ResponseError({ error: "Not test found", key: "id" });
+    if (!searchTest) return NotFound("test");
 
-    if (data.patientId && searchTest.patientId)
-      return new ResponseError({
-        error: "Cannot update a patient after being setted",
-        key: "patientid",
-      });
-    if (data.issuerId && searchTest.issuerId)
-      return new ResponseError({
-        error: "Cannot update a issuer after being setted",
-        key: "issuerid",
-      });
+    if (data.patientId && searchTest.patientId) return NotEditable("patient");
+    if (data.issuerId && searchTest.issuerId) return NotEditable("issuer");
     if (data.validatorId && searchTest.validatorId)
-      return new ResponseError({
-        error: "Cannot update a validator after being setted",
-        key: "validatorid",
-      });
+      return NotEditable("validator");
 
     if (data.validatorId) data.validated = new Date();
 
@@ -424,8 +419,7 @@ export async function requestValidation(
       !requester["sub-lab"].some((lab) => testLabList.has(lab))
     )
       return new ResponseError({
-        error:
-          "Can't request a validation on this test with your current privileges",
+        error: "Not enough permissions for this action",
         key: "role",
       });
 
@@ -487,8 +481,74 @@ export async function validateTest(id: string, validatorId: string) {
     // if (e.code !== "P2016") P2016 = RecordNotFound
     console.error(e);
     return new ResponseError({
-      error: "Uncatched error",
+      error: "Something went wrong",
       key: e.message.toLowerCase(),
     });
   }
+}
+
+export async function getTestValidatorSignatures(
+  id: string,
+  requester?: Payload
+) {
+  const { validator: validatorSignatures } = await prisma.test.findFirst({
+    where: {
+      id,
+      ...(requester && {
+        AND: [
+          {
+            OR: [
+              {
+                labId: !requester["sub-lab"].length
+                  ? undefined
+                  : { in: requester["sub-lab"] },
+              },
+              {
+                lab: {
+                  OR: [
+                    {
+                      userIds: requester["sub-user"]
+                        ? { has: requester["sub-user"] }
+                        : undefined,
+                    },
+                    {
+                      ownerIds: requester["sub-user"]
+                        ? { has: requester["sub-user"] }
+                        : undefined,
+                    },
+                  ],
+                },
+              },
+            ],
+          },
+        ],
+      }),
+      validated: { isSet: true },
+      isDeleted: false,
+    },
+    select: { validator: { select: { signature: true, stamp: true } } },
+  });
+
+  if (!validatorSignatures)
+    return new ResponseError({
+      error: "No test with requested params found",
+      key: "test",
+    });
+
+  if (validatorSignatures.signature) {
+    validatorSignatures.signature = await getSignedFileUrl(
+      "user-signatures",
+      validatorSignatures.signature.split("/")[1],
+      SIGNATURES_SIGNED_URL_EXPIRE
+    );
+  }
+  if (validatorSignatures.stamp) {
+    validatorSignatures.stamp = await getSignedFileUrl(
+      "user-signatures",
+      validatorSignatures.stamp.split("/")[1],
+      SIGNATURES_SIGNED_URL_EXPIRE
+    );
+  }
+
+  return validatorSignatures;
 }

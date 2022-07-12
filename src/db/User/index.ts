@@ -1,6 +1,10 @@
 import { Prisma, User } from "@prisma/client";
 import { signJWT } from "../../auth/index.js";
-import { getSignedFileUrl } from "../../aws/s3.js";
+import {
+  getSignedFileUrl,
+  SIGNATURES_SIGNED_URL_EXPIRE,
+  uploadFile,
+} from "../../aws/s3.js";
 import { hash as hashPassword } from "../../crypto/index.js";
 import { NotUnique } from "../../routes/Responses/index.js";
 import { ResponseError } from "../../types/Responses/error.js";
@@ -8,21 +12,41 @@ import { DefaultSelectMany } from "../../types/select";
 import { isValidObjectID } from "../../utils/index.js";
 import { prisma } from "../handler.js";
 import { slug as slugName } from "./utils/slug.js";
+import { UploadedFile } from "express-fileupload";
+import { SignatureItem } from "../../types/User.js";
 
-export async function getUser(user: string) {
+export async function getUser(user: string, signatures: boolean = false) {
   const select: Prisma.UserSelect = {
     id: true,
     email: true,
     name: true,
     slug: true,
     profileImg: true,
+    ...(signatures && { signature: true, stamp: true }),
   };
-  return isValidObjectID(user)
+  const _user: Partial<User> = isValidObjectID(user)
     ? await prisma.user.findUnique({ where: { id: user }, select })
     : await prisma.user.findFirst({
         where: { OR: [{ email: user }, { slug: user }] },
         select,
       });
+
+  if (_user.signature) {
+    _user.signature = await getSignedFileUrl(
+      "user-signatures",
+      _user.signature.split("/")[1],
+      SIGNATURES_SIGNED_URL_EXPIRE
+    );
+  }
+  if (_user.stamp) {
+    _user.stamp = await getSignedFileUrl(
+      "user-signatures",
+      _user.stamp.split("/")[1],
+      SIGNATURES_SIGNED_URL_EXPIRE
+    );
+  }
+
+  return _user;
 }
 
 export async function getEmployee(labId: string, employee: string) {
@@ -262,6 +286,69 @@ export async function updateUser(id: string, user: Partial<User>) {
         profileImg: true,
       },
     });
+  } catch (e) {
+    console.error(e);
+    return false;
+  }
+}
+
+export async function updateSignatures(
+  id: string,
+  { signature, stamp }: { signature?: SignatureItem; stamp?: SignatureItem }
+) {
+  try {
+    if (signature)
+      await uploadFile(
+        "user-signatures",
+        signature.name,
+        signature.data,
+        signature.mimetype
+      );
+    if (stamp)
+      await uploadFile(
+        "user-signatures",
+        stamp.name,
+        stamp.data,
+        stamp.mimetype
+      );
+
+    const user = await prisma.user.update({
+      where: { id },
+      data: {
+        ...(signature && {
+          signature: `user-signatures/${signature.name}`,
+        }),
+        ...(stamp && {
+          stamp: `user-signatures/${stamp.name}`,
+        }),
+      },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        slug: true,
+        profileImg: true,
+        signature: true,
+        stamp: true,
+      },
+    });
+
+    if (signature) {
+      user.signature = await getSignedFileUrl(
+        "user-signatures",
+        signature.name,
+        SIGNATURES_SIGNED_URL_EXPIRE
+      );
+    }
+    if (stamp) {
+      user.stamp = await getSignedFileUrl(
+        "user-signatures",
+        stamp.name,
+        SIGNATURES_SIGNED_URL_EXPIRE
+      );
+    }
+
+    return user;
   } catch (e) {
     console.error(e);
     return false;

@@ -1,7 +1,8 @@
 import { Router } from "express";
-import { getFileUploadUrl } from "../../aws/s3.js";
-
-const EXPIRE_PUBLIC_FILES_BUCKET_SECONDS = 300;
+import {
+  EXPIRE_PUBLIC_FILES_BUCKET_SECONDS,
+  getFileUploadUrl,
+} from "../../aws/s3.js";
 
 const router = Router();
 

@@ -1,5 +1,6 @@
 import { Prisma, Patient } from "@prisma/client";
 import { NotUnique } from "../../routes/Responses/index.js";
+import { ResponseErrorDataKey } from "../../types/Responses/error.js";
 import { DefaultSelectMany } from "../../types/select";
 import { isValidObjectID } from "../../utils/index.js";
 import { prisma } from "../handler.js";
@@ -64,7 +65,9 @@ export async function createPatient(data: Patient) {
     /* !@unique */
     if (e.code === "P2002" && e.meta) {
       return NotUnique(
-        (e.meta["target"] as string).replace("Patient_", "").replace("_key", "")
+        (e.meta["target"] as string)
+          .replace("Patient_", "")
+          .replace("_key", "") as ResponseErrorDataKey
       );
     }
     console.error({ e });

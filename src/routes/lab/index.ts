@@ -14,6 +14,7 @@ import { ResponseError } from "../../types/Responses/error.js";
 import { isValidObjectID } from "../../utils/index.js";
 import { authGuard } from "../middlewares/index.js";
 import { qrAccess, qrVerify } from "../../crypto/index.js";
+import { InvalidFormat } from "../Responses/index.js";
 
 const router = Router();
 
@@ -63,25 +64,26 @@ router.get("/:id", async (req, res) =>
 router.patch("/owners", authGuard, async (req: AuthRequest, res) => {
   const { labId, owner, type }: { [key: string]: string } = req.body;
   if (!labId || !owner || !type || !["ADD", "REMOVE"].includes(type))
-    return res
-      .status(400)
-      .send(new ResponseError({ error: "Invalid body format", key: "format" }));
+    return res.status(400).send(InvalidFormat("body"));
   if (!req.user["sub-lab"].length || !req.user["sub-lab"].includes(labId))
-    return res
-      .status(403)
-      .send(new ResponseError({ error: "Not enough privileges", key: "role" }));
+    return res.status(403).send(
+      new ResponseError({
+        error: "Not enough permissions for this action",
+        key: "role",
+      })
+    );
   return res.send(await upsertOwner(owner, labId, type as "ADD" | "REMOVE"));
 });
 router.patch("/users", authGuard, async (req: AuthRequest, res) => {
   const { labId, user, type }: { [key: string]: string } = req.body;
-  if (!labId || !user)
-    return res
-      .status(400)
-      .send(new ResponseError({ error: "Invalid body format", key: "format" }));
+  if (!labId || !user) return res.status(400).send(InvalidFormat("body"));
   if (!req.user["sub-lab"].length || !req.user["sub-lab"].includes(labId))
-    return res
-      .status(403)
-      .send(new ResponseError({ error: "Not enough privileges", key: "role" }));
+    return res.status(403).send(
+      new ResponseError({
+        error: "Not enough permissions for this action",
+        key: "role",
+      })
+    );
   if (type === "INVITE") {
     const response = await inviteUser(user, labId);
     if (response instanceof ResponseError) res.status(400);
@@ -91,9 +93,7 @@ router.patch("/users", authGuard, async (req: AuthRequest, res) => {
 });
 router.patch("/:id", authGuard, async (req: AuthRequest, res) => {
   if (!isValidObjectID(req.params.id))
-    return res
-      .status(400)
-      .send(new ResponseError({ error: "Invalid lab id", key: "format" }));
+    return res.status(400).send(InvalidFormat("lab id"));
   if (!req.user["sub-lab"].length)
     return res
       .status(403)
@@ -101,7 +101,7 @@ router.patch("/:id", authGuard, async (req: AuthRequest, res) => {
   if (!req.user["sub-lab"].includes(req.params.id))
     return res.status(403).send(
       new ResponseError({
-        error: "Not enough privileges for the operation for this lab",
+        error: "Not enough permissions for this action",
         key: "role",
       })
     );

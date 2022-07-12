@@ -1,20 +1,15 @@
 import AWSSDK from "aws-sdk";
 import { v4 } from "uuid";
+import { BUCKETS, S3_CONFIG } from "./constants.js";
 
 AWSSDK.config.update({
   accessKeyId: process.env.AWS_ACCESS_KEY_ID,
   secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
 });
-const s3 = new AWSSDK.S3({
-  endpoint: "https://s3.filebase.com",
-  signatureVersion: "v4",
-  httpOptions: {
-    timeout: 1_200_000 /* 20 min */,
-  },
-});
+const s3 = new AWSSDK.S3(S3_CONFIG);
 
 export const uploadFile = async (
-  Bucket: string,
+  Bucket: typeof BUCKETS[number],
   fileKey: string,
   file: Buffer,
   ContentType?: string
@@ -36,11 +31,11 @@ export const uploadFile = async (
   return true;
 };
 
-export const getFileUrl = (Bucket: string, fileKey: string) =>
+export const getFileUrl = (Bucket: typeof BUCKETS[number], fileKey: string) =>
   `https://${Bucket}.s3.filebase.com/${fileKey}`;
 
 export const getSignedFileUrl = async (
-  Bucket: string,
+  Bucket: typeof BUCKETS[number],
   fileKey: string,
   expireSeconds: number
 ) => {
@@ -57,7 +52,7 @@ export const getSignedFileUrl = async (
 };
 
 export const getFileUploadUrl = async (
-  Bucket: "public-files",
+  Bucket: typeof BUCKETS[number],
   Expires: number
 ) => {
   try {
@@ -71,3 +66,7 @@ export const getFileUploadUrl = async (
     return null;
   }
 };
+
+export const SIGNATURES_SIGNED_URL_EXPIRE = 15;
+export const LISTENER_SIGNED_URL_EXPIRE = 3600;
+export const EXPIRE_PUBLIC_FILES_BUCKET_SECONDS = 300;

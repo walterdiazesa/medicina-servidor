@@ -86,6 +86,8 @@ model User {
   name String
   hash String
   profileImg String?
+  signature String?
+  stamp String?
   createdAt DateTime @default(now())
   labIds String[] @db.ObjectId
   Lab Lab[] @relation(fields: [labIds], references: [id])

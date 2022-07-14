@@ -1,0 +1,4 @@
+start cmd /K mongod --dbpath "C:\Program Files\MongoDB\Server\5.0\data" --logpath "C:\Program Files\MongoDB\Server\5.0\log\mongod.log" --port 27017 --storageEngine=wiredTiger --journal --replSet rs1
+start cmd /K mongod --dbpath "C:\Program Files\MongoDB\Server\5.0\data2\db" --logpath "C:\Program Files\MongoDB\Server\5.0\data2\log\mongod.log" --port 27020 --storageEngine=wiredTiger --journal --replSet rs1
+start cmd /K mongod --dbpath "C:\Program Files\MongoDB\Server\5.0\data3\db" --logpath "C:\Program Files\MongoDB\Server\5.0\data3\log\mongod.log" --port 27021 --storageEngine=wiredTiger --journal --replSet rs1
+start wsl redis-server

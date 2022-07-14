@@ -41,13 +41,13 @@ export const login = async (
   const userPromise = _isValidObjectID
     ? prisma.user.findUnique({
         where: { id: username },
-        select: { id: true, hash: true, email: true, profileImg: true },
+        select: { id: true, hash: true, email: true },
       })
     : prisma.user.findFirst({
         where: {
           OR: [{ email: username }, { slug: username }],
         },
-        select: { id: true, hash: true, email: true, profileImg: true }, // labIds: true, ownerIds: true,
+        select: { id: true, hash: true, email: true }, // labIds: true, ownerIds: true,
       });
   const labPromise = _isValidObjectID
     ? prisma.lab.findUnique({
@@ -109,9 +109,7 @@ export const login = async (
 
   payload["sub"] = user?.email || lab?.email;
   payload["img"] =
-    lab?.img ||
-    ((payload["sub-lab"] as string[]).length === 1 && isLabAndImg) ||
-    user?.profileImg;
+    lab?.img || ((payload["sub-lab"] as string[]).length === 1 && isLabAndImg);
 
   return { access_token: signJWT(payload), payload };
 };

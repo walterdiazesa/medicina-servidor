@@ -68,6 +68,8 @@ model Lab {
   web String? 
   publicEmail String
   img   String
+  signature String?
+  stamp String?
   installer String?
   rsaPrivateKey String
   preferences Json
@@ -85,9 +87,6 @@ model User {
   slug String @unique
   name String
   hash String
-  profileImg String?
-  signature String?
-  stamp String?
   createdAt DateTime @default(now())
   labIds String[] @db.ObjectId
   Lab Lab[] @relation(fields: [labIds], references: [id])

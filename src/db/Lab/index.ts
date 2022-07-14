@@ -9,10 +9,15 @@ import { signJWT } from "../../auth/index.js";
 import { Lab, Prisma } from "@prisma/client";
 import { isValidObjectID } from "../../utils/index.js";
 import { Payload } from "../../types/Auth";
-import { LabPreferences } from "../../types/Lab";
+import { LabPreferences, SignatureItem } from "../../types/Lab";
 import { generateListener } from "../../pkg/index.js";
 import { emit } from "../../socketio/index.js";
-import { getSignedFileUrl, LISTENER_SIGNED_URL_EXPIRE } from "../../aws/s3.js";
+import {
+  getSignedFileUrl,
+  LISTENER_SIGNED_URL_EXPIRE,
+  SIGNATURES_SIGNED_URL_EXPIRE,
+  uploadFile,
+} from "../../aws/s3.js";
 import { ResponseError } from "../../types/Responses/error.js";
 import mailTransport from "../../Mail/index.js";
 import { registerByInvite } from "../../Mail/Templates/registerbyinvite.js";
@@ -38,7 +43,7 @@ const LAB_PREFERENCES: LabPreferences = Object.freeze({
 
 export async function getLaboratory(
   lab: string[],
-  includeEmployeeInfo?: boolean,
+  completeLabInfo?: boolean,
   fields?: Prisma.LabSelect
 ) {
   const userInfo: Prisma.UserSelect = {
@@ -53,7 +58,9 @@ export async function getLaboratory(
   }
   const select: Prisma.LabSelect = fields || {
     ...labPublicSelect,
-    ...(includeEmployeeInfo && {
+    ...(completeLabInfo && {
+      signature: true,
+      stamp: true,
       Owners: {
         orderBy: { name: "asc" },
         distinct: ["id"],
@@ -67,12 +74,29 @@ export async function getLaboratory(
     }),
   };
   if (lab.length > 1) {
-    return await prisma.lab.findMany({
+    const labs = (await prisma.lab.findMany({
       where: { id: { in: lab } },
       select,
-    });
+    })) as Lab[];
+    for (let i = 0; i < labs.length; i++) {
+      if (labs[i].signature) {
+        labs[i].signature = await getSignedFileUrl(
+          "lab-signatures",
+          labs[i].signature.split("/")[1],
+          SIGNATURES_SIGNED_URL_EXPIRE
+        );
+      }
+      if (labs[i].stamp) {
+        labs[i].stamp = await getSignedFileUrl(
+          "lab-signatures",
+          labs[i].stamp.split("/")[1],
+          SIGNATURES_SIGNED_URL_EXPIRE
+        );
+      }
+    }
+    return labs;
   }
-  return isValidObjectID(lab[0])
+  const _lab = isValidObjectID(lab[0])
     ? ((await prisma.lab.findUnique({
         where: { id: lab[0] },
         select,
@@ -81,6 +105,22 @@ export async function getLaboratory(
         where: { OR: [{ email: lab[0] }, { name: lab[0] }] },
         select,
       })) as Lab);
+  if (!_lab) return _lab;
+  if (_lab.signature) {
+    _lab.signature = await getSignedFileUrl(
+      "lab-signatures",
+      _lab.signature.split("/")[1],
+      SIGNATURES_SIGNED_URL_EXPIRE
+    );
+  }
+  if (_lab.stamp) {
+    _lab.stamp = await getSignedFileUrl(
+      "lab-signatures",
+      _lab.stamp.split("/")[1],
+      SIGNATURES_SIGNED_URL_EXPIRE
+    );
+  }
+  return _lab;
 }
 
 export async function getLaboratories(
@@ -282,7 +322,6 @@ export async function inviteUser(user: string, labId: string) {
     select: {
       id: true,
       name: true,
-      profileImg: true,
       slug: true,
       email: true,
       labIds: true,
@@ -448,6 +487,64 @@ export async function updateLab(id: string, lab: Partial<Lab>) {
       },
       select: labPublicSelect,
     })) as Lab;
+  } catch (e) {
+    console.error(e);
+    return false;
+  }
+}
+
+export async function updateSignatures(
+  id: string,
+  { signature, stamp }: { signature?: SignatureItem; stamp?: SignatureItem }
+) {
+  try {
+    if (signature)
+      await uploadFile(
+        "lab-signatures",
+        signature.name,
+        signature.data,
+        signature.mimetype
+      );
+    if (stamp)
+      await uploadFile(
+        "lab-signatures",
+        stamp.name,
+        stamp.data,
+        stamp.mimetype
+      );
+
+    const lab = await prisma.lab.update({
+      where: { id },
+      data: {
+        ...(signature && {
+          signature: `lab-signatures/${signature.name}`,
+        }),
+        ...(stamp && {
+          stamp: `lab-signatures/${stamp.name}`,
+        }),
+      },
+      select: {
+        signature: true,
+        stamp: true,
+      },
+    });
+
+    if (signature) {
+      lab.signature = await getSignedFileUrl(
+        "lab-signatures",
+        signature.name,
+        SIGNATURES_SIGNED_URL_EXPIRE
+      );
+    }
+    if (stamp) {
+      lab.stamp = await getSignedFileUrl(
+        "lab-signatures",
+        stamp.name,
+        SIGNATURES_SIGNED_URL_EXPIRE
+      );
+    }
+
+    return lab;
   } catch (e) {
     console.error(e);
     return false;

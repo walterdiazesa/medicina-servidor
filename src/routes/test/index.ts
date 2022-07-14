@@ -15,7 +15,6 @@ import {
   createChemTest,
   requestValidation,
   validateTest,
-  getTestValidatorSignatures,
 } from "../../db/Test/index.js";
 import { AuthRequest, ListenerRequest } from "../../types/Express/index.js";
 import { ResponseError } from "../../types/Responses/error.js";
@@ -40,33 +39,6 @@ router.get("/:id", async (req, res) => res.send(await getTest(req.params.id)));
 router.get("/:id/access", authGuard, async (req: AuthRequest, res) =>
   res.send(await getTestAccess(req.params.id, req.user))
 );
-router.get(
-  "/:id/validator_signatures",
-  authGuard,
-  async (req: AuthRequest, res) => {
-    const testSignatures = await getTestValidatorSignatures(
-      req.params.id,
-      req.user
-    );
-    if (testSignatures instanceof ResponseError) res.status(403);
-    res.send(testSignatures);
-  }
-);
-router.get("/:id/validator_signatures/:access", async (req, res) => {
-  if (
-    !req.params.access ||
-    !req.params.id ||
-    !(await qrVerify(req.params.access, req.params.id))
-  )
-    return res
-      .status(403)
-      .send(
-        new ResponseError({ error: "Not a valid access hash", key: "hash" })
-      );
-  const testSignatures = await getTestValidatorSignatures(req.params.id);
-  if (testSignatures instanceof ResponseError) res.status(403);
-  res.send(testSignatures);
-});
 router.get("/:id/access_link", authGuard, async (req: AuthRequest, res) => {
   if (!(await getTestAccess(req.params.id, req.user)))
     return res.status(403).send(

@@ -1,4 +1,4 @@
-export const BUCKETS = ["public-files", "listener", "user-signatures"] as const;
+export const BUCKETS = ["public-files", "listener", "lab-signatures"] as const;
 
 export const S3_CONFIG = Object.freeze({
   endpoint: "https://s3.filebase.com",

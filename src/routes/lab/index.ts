@@ -8,6 +8,7 @@ import {
   removeUser,
   inviteUser,
   updateLab,
+  updateSignatures,
 } from "../../db/Lab/index.js";
 import { AuthRequest } from "../../types/Express/index.js";
 import { ResponseError } from "../../types/Responses/error.js";
@@ -15,6 +16,9 @@ import { isValidObjectID } from "../../utils/index.js";
 import { authGuard } from "../middlewares/index.js";
 import { qrAccess, qrVerify } from "../../crypto/index.js";
 import { InvalidFormat } from "../Responses/index.js";
+import fileUpload from "express-fileupload";
+import { Lab } from "@prisma/client";
+import { SignatureItem } from "../../types/Lab.js";
 
 const router = Router();
 
@@ -30,7 +34,7 @@ router.get(["/mine", "/mine/:id"], authGuard, async (req: AuthRequest, res) => {
     return res.send(
       await getLaboratory(
         req.user["sub-lab"],
-        Boolean(req.query.includeEmployeeInfo)
+        Boolean(req.query.completeLabInfo)
       )
     );
   if (!req.user["sub-lab"].includes(req.params.id))
@@ -91,7 +95,7 @@ router.patch("/users", authGuard, async (req: AuthRequest, res) => {
   }
   return res.send(await removeUser(user, labId));
 });
-router.patch("/:id", authGuard, async (req: AuthRequest, res) => {
+router.patch("/:id", authGuard, fileUpload(), async (req: AuthRequest, res) => {
   if (!isValidObjectID(req.params.id))
     return res.status(400).send(InvalidFormat("lab id"));
   if (!req.user["sub-lab"].length)
@@ -105,14 +109,53 @@ router.patch("/:id", authGuard, async (req: AuthRequest, res) => {
         key: "role",
       })
     );
-  const lab = await updateLab(req.params.id, req.body);
+  let lab: false | ResponseError | Partial<Lab>;
+  if (!req.headers["content-type"].includes("multipart/form-data"))
+    lab = await updateLab(req.params.id, req.body);
+  else {
+    if (!req.files || (!req.files.signature && !req.files.stamp))
+      return res.status(400).send(
+        new ResponseError({
+          error:
+            "Invalid operation, fields needed when using multipart/form-data",
+          key: "format",
+        })
+      );
+
+    const signatures: { signature?: SignatureItem; stamp?: SignatureItem } = {};
+    if (req.files.signature)
+      signatures["signature"] = {
+        name: `${req.params.id}-signature.${
+          (req.files!.signature as fileUpload.UploadedFile).name
+            .split(".")
+            .reverse()[0]
+        }`,
+        data: (req.files!.signature as fileUpload.UploadedFile).data,
+        mimetype: (req.files!.signature as fileUpload.UploadedFile).mimetype,
+      };
+    if (req.files.stamp)
+      signatures["stamp"] = {
+        name: `${req.params.id}-stamp.${
+          (req.files!.stamp as fileUpload.UploadedFile).name
+            .split(".")
+            .reverse()[0]
+        }`,
+        data: (req.files!.stamp as fileUpload.UploadedFile).data,
+        mimetype: (req.files!.stamp as fileUpload.UploadedFile).mimetype,
+      };
+    lab = await updateSignatures(req.params.id, signatures);
+  }
   if (lab instanceof ResponseError) res.status(400);
   else if (lab && req.user["sub-lab"].length === 1)
-    res.cookie("session", signJWT({ ...req.user, img: lab.img }), {
-      httpOnly: true,
-      secure: process.env.NODE_ENV.trim() === "PROD",
-      sameSite: process.env.NODE_ENV.trim() === "PROD" ? "none" : undefined,
-    });
+    res.cookie(
+      "session",
+      signJWT({ ...req.user, ...(lab.img && { img: lab.img }) }),
+      {
+        httpOnly: true,
+        secure: process.env.NODE_ENV.trim() === "PROD",
+        sameSite: process.env.NODE_ENV.trim() === "PROD" ? "none" : undefined,
+      }
+    );
   res.send(lab);
 });
 router.post("/", async (req, res) => {

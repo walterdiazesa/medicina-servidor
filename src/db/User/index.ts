@@ -13,7 +13,6 @@ import { isValidObjectID } from "../../utils/index.js";
 import { prisma } from "../handler.js";
 import { slug as slugName } from "./utils/slug.js";
 import { UploadedFile } from "express-fileupload";
-import { SignatureItem } from "../../types/User.js";
 
 export async function getUser(user: string, signatures: boolean = false) {
   const select: Prisma.UserSelect = {
@@ -21,8 +20,6 @@ export async function getUser(user: string, signatures: boolean = false) {
     email: true,
     name: true,
     slug: true,
-    profileImg: true,
-    ...(signatures && { signature: true, stamp: true }),
   };
   const _user: Partial<User> = isValidObjectID(user)
     ? await prisma.user.findUnique({ where: { id: user }, select })
@@ -30,21 +27,6 @@ export async function getUser(user: string, signatures: boolean = false) {
         where: { OR: [{ email: user }, { slug: user }] },
         select,
       });
-
-  if (_user.signature) {
-    _user.signature = await getSignedFileUrl(
-      "user-signatures",
-      _user.signature.split("/")[1],
-      SIGNATURES_SIGNED_URL_EXPIRE
-    );
-  }
-  if (_user.stamp) {
-    _user.stamp = await getSignedFileUrl(
-      "user-signatures",
-      _user.stamp.split("/")[1],
-      SIGNATURES_SIGNED_URL_EXPIRE
-    );
-  }
 
   return _user;
 }
@@ -155,7 +137,7 @@ export async function getUsers({
         ],
       }),
     },
-    select: { id: true, email: true, name: true, slug: true, profileImg: true },
+    select: { id: true, email: true, name: true, slug: true },
   });
   const response: any = { users };
   if (labId) {
@@ -191,7 +173,6 @@ export async function createUser({
         name,
         hash,
         slug,
-        profileImg,
         labIds: {
           set: [labId],
         },
@@ -201,7 +182,6 @@ export async function createUser({
         email: true,
         name: true,
         slug: true,
-        profileImg: true,
       },
     });
     await prisma.lab.update({
@@ -227,7 +207,6 @@ export async function createUser({
               name,
               hash,
               slug,
-              profileImg,
               labIds: {
                 set: [labId],
               },
@@ -237,7 +216,6 @@ export async function createUser({
               email: true,
               name: true,
               slug: true,
-              profileImg: true,
             },
           });
           await prisma.lab.update({
@@ -266,15 +244,6 @@ export async function updateUser(id: string, user: Partial<User>) {
     delete user.hash;
     delete user.id;
 
-    if (
-      user.profileImg &&
-      !user.profileImg.startsWith("https://public-files.s3.filebase.com/")
-    )
-      return new ResponseError({
-        error: "Invalid image storage host",
-        key: "storage",
-      });
-
     return await prisma.user.update({
       where: { id },
       data: user,
@@ -283,72 +252,8 @@ export async function updateUser(id: string, user: Partial<User>) {
         email: true,
         name: true,
         slug: true,
-        profileImg: true,
       },
     });
-  } catch (e) {
-    console.error(e);
-    return false;
-  }
-}
-
-export async function updateSignatures(
-  id: string,
-  { signature, stamp }: { signature?: SignatureItem; stamp?: SignatureItem }
-) {
-  try {
-    if (signature)
-      await uploadFile(
-        "user-signatures",
-        signature.name,
-        signature.data,
-        signature.mimetype
-      );
-    if (stamp)
-      await uploadFile(
-        "user-signatures",
-        stamp.name,
-        stamp.data,
-        stamp.mimetype
-      );
-
-    const user = await prisma.user.update({
-      where: { id },
-      data: {
-        ...(signature && {
-          signature: `user-signatures/${signature.name}`,
-        }),
-        ...(stamp && {
-          stamp: `user-signatures/${stamp.name}`,
-        }),
-      },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        slug: true,
-        profileImg: true,
-        signature: true,
-        stamp: true,
-      },
-    });
-
-    if (signature) {
-      user.signature = await getSignedFileUrl(
-        "user-signatures",
-        signature.name,
-        SIGNATURES_SIGNED_URL_EXPIRE
-      );
-    }
-    if (stamp) {
-      user.stamp = await getSignedFileUrl(
-        "user-signatures",
-        stamp.name,
-        SIGNATURES_SIGNED_URL_EXPIRE
-      );
-    }
-
-    return user;
   } catch (e) {
     console.error(e);
     return false;

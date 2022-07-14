@@ -50,7 +50,6 @@ export async function getTest(id: string) {
       issuer: {
         select: {
           name: true,
-          profileImg: true,
           slug: true,
           email: true,
         },
@@ -58,11 +57,8 @@ export async function getTest(id: string) {
       validator: {
         select: {
           name: true,
-          profileImg: true,
           slug: true,
           email: true,
-          signature: true,
-          stamp: true,
         },
       },
     },
@@ -310,12 +306,12 @@ export async function updateTest(
         include: {
           ...(data["issuerId"] && {
             issuer: {
-              select: { name: true, email: true, slug: true, profileImg: true },
+              select: { name: true, email: true, slug: true },
             },
           }),
           ...(data["validatorId"] && {
             validator: {
-              select: { name: true, email: true, slug: true, profileImg: true },
+              select: { name: true, email: true, slug: true },
             },
           }),
           ...(data["patientId"] && {
@@ -485,70 +481,4 @@ export async function validateTest(id: string, validatorId: string) {
       key: e.message.toLowerCase(),
     });
   }
-}
-
-export async function getTestValidatorSignatures(
-  id: string,
-  requester?: Payload
-) {
-  const { validator: validatorSignatures } = await prisma.test.findFirst({
-    where: {
-      id,
-      ...(requester && {
-        AND: [
-          {
-            OR: [
-              {
-                labId: !requester["sub-lab"].length
-                  ? undefined
-                  : { in: requester["sub-lab"] },
-              },
-              {
-                lab: {
-                  OR: [
-                    {
-                      userIds: requester["sub-user"]
-                        ? { has: requester["sub-user"] }
-                        : undefined,
-                    },
-                    {
-                      ownerIds: requester["sub-user"]
-                        ? { has: requester["sub-user"] }
-                        : undefined,
-                    },
-                  ],
-                },
-              },
-            ],
-          },
-        ],
-      }),
-      validated: { isSet: true },
-      isDeleted: false,
-    },
-    select: { validator: { select: { signature: true, stamp: true } } },
-  });
-
-  if (!validatorSignatures)
-    return new ResponseError({
-      error: "No test with requested params found",
-      key: "test",
-    });
-
-  if (validatorSignatures.signature) {
-    validatorSignatures.signature = await getSignedFileUrl(
-      "user-signatures",
-      validatorSignatures.signature.split("/")[1],
-      SIGNATURES_SIGNED_URL_EXPIRE
-    );
-  }
-  if (validatorSignatures.stamp) {
-    validatorSignatures.stamp = await getSignedFileUrl(
-      "user-signatures",
-      validatorSignatures.stamp.split("/")[1],
-      SIGNATURES_SIGNED_URL_EXPIRE
-    );
-  }
-
-  return validatorSignatures;
 }

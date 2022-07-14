@@ -9,6 +9,8 @@ export type Lab = {
   web: string | null;
   publicEmail: string;
   img: string;
+  signature: string | null;
+  stamp: string | null;
   installer: string | null;
   rsaPrivateKey: string;
   preferences: LabPreferences;
@@ -21,4 +23,10 @@ export type LabPreferences = {
   useTestCustomId: boolean;
   leadingZerosWhenCustomId: number;
   useQR: boolean;
+};
+
+export type SignatureItem = {
+  name: string;
+  data: Buffer;
+  mimetype: string;
 };

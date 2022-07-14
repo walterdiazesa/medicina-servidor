@@ -9,16 +9,13 @@ import {
   createUser,
   getEmployee,
   updateUser,
-  updateSignatures,
 } from "../../db/User/index.js";
-import { AuthRequest, ListenerRequest } from "../../types/Express/index.js";
+import { AuthRequest } from "../../types/Express/index.js";
 import { ResponseError } from "../../types/Responses/error.js";
 import { normalize } from "../../utils/index.js";
-import { authGuard, listenerGuard } from "../middlewares/index.js";
+import { authGuard } from "../middlewares/index.js";
 import fileUpload from "express-fileupload";
-import axios from "axios";
 import { User } from "@prisma/client";
-import { SignatureItem } from "../../types/User.js";
 import { InvalidFormat } from "../Responses/index.js";
 
 const router = Router();
@@ -27,7 +24,7 @@ const router = Router();
 router.get("/me", authGuard, async (req: AuthRequest, res) =>
   res.send(await getUser(req.user["sub-user"], true))
 );
-router.patch("/me", authGuard, fileUpload(), async (req: AuthRequest, res) => {
+router.patch("/me", authGuard, async (req: AuthRequest, res) => {
   if (!req.user["sub-user"])
     return res.status(403).send(
       new ResponseError({
@@ -36,58 +33,11 @@ router.patch("/me", authGuard, fileUpload(), async (req: AuthRequest, res) => {
       })
     );
 
-  // const lastPayloadImg = req.user.img;
-  let user: false | ResponseError | Partial<User>;
-
-  if (!req.headers["content-type"].includes("multipart/form-data"))
-    user = await updateUser(req.user["sub-user"], req.body);
-  else {
-    if (!req.files || (!req.files.signature && !req.files.stamp))
-      return res.status(400).send(
-        new ResponseError({
-          error:
-            "Invalid operation, fields needed when using multipart/form-data",
-          key: "format",
-        })
-      );
-
-    const signatures: { signature?: SignatureItem; stamp?: SignatureItem } = {};
-    /* await uploadFile(
-      "user-signatures",
-      req.user["sub-user"],
-      req.body.signature,
-      "text/plain"
-    ); */
-    if (req.files.signature)
-      signatures["signature"] = {
-        name: `${req.user["sub-user"]}-signature.${
-          (req.files!.signature as fileUpload.UploadedFile).name
-            .split(".")
-            .reverse()[0]
-        }`,
-        data: (req.files!.signature as fileUpload.UploadedFile).data,
-        mimetype: (req.files!.signature as fileUpload.UploadedFile).mimetype,
-      };
-    if (req.files.stamp)
-      signatures["stamp"] = {
-        name: `${req.user["sub-user"]}-stamp.${
-          (req.files!.stamp as fileUpload.UploadedFile).name
-            .split(".")
-            .reverse()[0]
-        }`,
-        data: (req.files!.stamp as fileUpload.UploadedFile).data,
-        mimetype: (req.files!.stamp as fileUpload.UploadedFile).mimetype,
-      };
-    user = await updateSignatures(req.user["sub-user"], signatures);
-  }
+  const user = await updateUser(req.user["sub-user"], req.body);
 
   if (user instanceof ResponseError) res.status(400);
-  else if (
-    user &&
-    req.body.profileImg &&
-    (!req.user.img || req.user["sub-lab"].length !== 1) // || (lastPayloadImg && lastPayloadImg !== user.profileImg)
-  )
-    res.cookie("session", signJWT({ ...req.user, img: user.profileImg }), {
+  else
+    res.cookie("session", signJWT(req.user), {
       httpOnly: true,
       secure: process.env.NODE_ENV.trim() === "PROD",
       sameSite: process.env.NODE_ENV.trim() === "PROD" ? "none" : undefined,

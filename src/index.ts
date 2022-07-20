@@ -97,8 +97,10 @@ if (cluster.isPrimary) {
   app.use("/auth", authRoutes);
   app.use("/files", fileRoutes);
 
-  const server = app.listen(process.env.PORT || 8080, "localhost", () =>
-    console.log("Medicina API running...", process.env.PORT || 8080)
+  const server = app.listen(
+    process.env.PORT ? parseInt(process.env.PORT) : 8080,
+    "127.0.0.1",
+    () => console.log("Medicina API running...", process.env.PORT || 8080)
   );
   const io = new SocketIOServer(server, {
     cors: { origin: "*" },

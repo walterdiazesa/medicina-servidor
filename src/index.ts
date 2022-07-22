@@ -71,6 +71,7 @@ if (cluster.isPrimary) {
         if (path.includes("test") && ["GET", "PUT"].includes(method))
           return false;
         if (path.includes("auth")) return false;
+        if (path.includes("files")) return false;
       }
       return true;
     };

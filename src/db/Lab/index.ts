@@ -234,7 +234,7 @@ export async function createLaboratory({
         );
     });
     return {
-      access_token: signJWT({ "sub-lab": lab.id, sub: lab.email }),
+      access_token: signJWT({ "sub-lab": [lab.id], sub: lab.email, img }),
       lab,
     };
   } catch (e) {

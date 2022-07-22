@@ -9,10 +9,10 @@ import { isValidObjectID } from "../utils/index.js";
 import { Prisma } from "@prisma/client";
 import { Payload } from "../types/Auth/index.js";
 
-export const signJWT = (payload: Object) => {
-  delete (payload as any).iat;
-  delete (payload as any).exp;
-  delete (payload as any).iss;
+export const signJWT = (payload: Partial<Payload>) => {
+  delete payload.iat;
+  delete payload.exp;
+  delete payload.iss;
   return jsonwebtoken.sign(payload, process.env.JWT_SECRET.trim(), {
     issuer: "medicina-servidor",
     algorithm: "HS256",

@@ -18,7 +18,7 @@ import { DefaultEventsMap } from "socket.io/dist/typed-events";
 import { createAdapter } from "@socket.io/redis-adapter";
 import { createClient } from "redis";
 import { RedisClient, RedisSubClient } from "./redis/index.js";
-import { cookieParser } from "./routes/middlewares/index.js";
+import { cookieParser, routesGuard } from "./routes/middlewares/index.js";
 import { verifyJWT } from "./auth/index.js";
 import { getLaboratories } from "./db/Lab/index.js";
 import { parseQueryBoolean } from "./routes/middlewares/index.js";
@@ -60,7 +60,7 @@ if (cluster.isPrimary) {
 } else {
   const app = express();
 
-  // TO-DO: add specific cors, e.g GET: /test (cors("[next*]"), POST: /test (cors("*")))
+  // @deprecated
   // Cors doc: https://stackabuse.com/handling-cors-with-node-js/
   //#region CORS
   const corsOptions = (req: Request, callback: any) => {
@@ -83,7 +83,8 @@ if (cluster.isPrimary) {
   };
   //#endregion
 
-  app.use(cors(corsOptions)); // Allow * origin
+  app.use(cors()); // Allow * origin
+  app.use((req, res, next) => routesGuard(corsWhiteList, req, res, next)); // Allow * origin
   app.use(express.json());
   app.use(cookieParser);
   app.use(parseQueryBoolean());

@@ -6,17 +6,10 @@ import {
 
 const router = Router();
 
-router.get("/upload", async (req, res) => {
-  console.log(
-    "New request to /files/upload",
-    req.headers.origin,
-    req.headers.host
-  );
-  if (req.headers.origin !== process.env.APP_HOST)
-    return res.status(403).send("No estás authorizado lmao");
+router.get("/upload", async (req, res) =>
   res.send(
     await getFileUploadUrl("public-files", EXPIRE_PUBLIC_FILES_BUCKET_SECONDS)
-  );
-});
+  )
+);
 
 export default router;

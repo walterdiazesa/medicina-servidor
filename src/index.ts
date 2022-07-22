@@ -83,8 +83,8 @@ if (cluster.isPrimary) {
   };
   //#endregion
 
-  app.use(cors()); // Allow * origin
-  app.use((req, res, next) => routesGuard(corsWhiteList, req, res, next)); // Allow * origin
+  app.use(cors({ origin: true, credentials: true })); // Allow * origin
+  app.use((req, res, next) => routesGuard(corsWhiteList, req, res, next));
   app.use(express.json());
   app.use(cookieParser);
   app.use(parseQueryBoolean());

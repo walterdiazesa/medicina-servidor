@@ -1,5 +1,6 @@
 import { Test, User } from "@prisma/client";
 import { TestItem } from "../../types/Test.js";
+import { getTestCategory } from "../../utils/index.js";
 
 export const validateByRequest = ({
   validator,
@@ -86,9 +87,9 @@ export const validateByRequest = ({
               test.patient.email
             })</span></p>`
       }
-      <p>Sexo según Chem: <span style="color: #374151; font-weight: 600;">${
-        test.sex
-      }</span></p>
+      <p>Categoría del test: <span style="color: #374151; font-weight: 600;">${getTestCategory(
+        test
+      )}</span></p>
       <div class="tests-grid" style="background-color: #d3d3d3; display: flex; font-weight: 600;">
         <span style="width: 30%;">Prueba</span>
         <span style="width: 24%;">Resultado</span>
@@ -108,14 +109,19 @@ export const validateByRequest = ({
             ${item.name} ${item.assign}
           </span>
           <span style="width: 24%;">
-            ${item.value.replace(/[a-zA-Z]/g, "").replace("/", "")}
+            ${parseInt(item.value)}
           </span>
-          <span style="width: 16.3%;">${item.value.replace(/\d/g, "")}</span>
+          <span style="width: 16.3%;">${item.value.replace(/\d+/, "")}</span>
           <span style="width: 29.7%;">
             ${
               !item.range
-                ? "-"
-                : `(${item.range.item}) ${item.range.between.from} - ${item.range.between.to}`
+                ? ""
+                : `${
+                    parseInt(item.value) < item.range.between.from ||
+                    parseInt(item.value) > item.range.between.to
+                      ? `<b style="color: #ca8a04;">!</b> `
+                      : ""
+                  }${item.range.between.from} - ${item.range.between.to}`
             }
           </span>
         </div>`

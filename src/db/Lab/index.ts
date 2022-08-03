@@ -7,7 +7,7 @@ import {
 import { NotUnique } from "../../routes/Responses/index.js";
 import { signJWT } from "../../auth/index.js";
 import { Lab, Prisma } from "@prisma/client";
-import { isValidObjectID } from "../../utils/index.js";
+import { isInteger, isValidObjectID } from "../../utils/index.js";
 import { Payload } from "../../types/Auth";
 import { LabPreferences, SignatureItem } from "../../types/Lab";
 import { generateListener } from "../../pkg/index.js";
@@ -375,6 +375,7 @@ export async function inviteUser(user: string, labId: string) {
     to: user,
     subject: `"${name}" te ha invitado a su laboratorio`,
     html: registerByInvite({ name, img, invitationHash }),
+    priority: "high",
   });
 
   return true;
@@ -448,15 +449,23 @@ export async function updateLab(id: string, lab: Partial<Lab>) {
 
     if (lab.preferences) {
       if (
-        (lab.preferences as LabPreferences).leadingZerosWhenCustomId &&
-        ((lab.preferences as LabPreferences).leadingZerosWhenCustomId < 0 ||
-          (lab.preferences as LabPreferences).leadingZerosWhenCustomId >
-            "2147483647".length)
-      )
-        return new ResponseError({
-          error: "Invalid leadingZerosWhenCustomId property > Outside bounds",
-          key: "preferences",
-        });
+        (lab.preferences as LabPreferences).leadingZerosWhenCustomId !==
+        undefined
+      ) {
+        const leadingZerosWhenCustomId = (lab.preferences as LabPreferences)
+          .leadingZerosWhenCustomId;
+        if (
+          !isInteger(leadingZerosWhenCustomId) ||
+          +leadingZerosWhenCustomId < 0 ||
+          +leadingZerosWhenCustomId > "2147483647".length
+        )
+          return new ResponseError({
+            error: !isInteger(leadingZerosWhenCustomId)
+              ? "Invalid leadingZerosWhenCustomId property > Not a integer"
+              : "Invalid leadingZerosWhenCustomId property > Outside bounds",
+            key: "preferences",
+          });
+      }
       if ((lab.preferences as LabPreferences).useTestCustomId !== undefined)
         (lab.preferences as LabPreferences).useTestCustomId = !!(
           lab.preferences as LabPreferences
@@ -465,6 +474,21 @@ export async function updateLab(id: string, lab: Partial<Lab>) {
         (lab.preferences as LabPreferences).useQR = !!(
           lab.preferences as LabPreferences
         ).useQR;
+      if ((lab.preferences as LabPreferences).customIdStartFrom !== undefined) {
+        const customIdStartFrom = (lab.preferences as LabPreferences)
+          .customIdStartFrom;
+        if (
+          !isInteger(customIdStartFrom) ||
+          +customIdStartFrom < 0 ||
+          +customIdStartFrom > 2147483647
+        )
+          return new ResponseError({
+            error: !isInteger(customIdStartFrom)
+              ? "Invalid customIdStartFrom property > Not a integer"
+              : "Invalid customIdStartFrom property > Outside bounds",
+            key: "preferences",
+          });
+      }
       if (!Object.keys(lab.preferences).length) lab.preferences = undefined;
     }
 

@@ -17,10 +17,10 @@ model Test {
   issuer User? @relation(fields: [issuerId], references: [id])
   validator User? @relation("validator", fields: [validatorId], references: [id])
   patient  Patient?  @relation(fields: [patientId], references: [id])
-  sex      String
   tests    Json
   remark Json?
   date   DateTime
+  category TestCategory
   validated   DateTime?
   labId String    @db.ObjectId
   issuerId String?    @db.ObjectId
@@ -28,6 +28,12 @@ model Test {
   patientId String?    @db.ObjectId
   listenerRequest  ListenerRequest?
   isDeleted Boolean @default(false)
+}
+
+enum TestCategory {
+  DRYCHEM
+  TCUSTOM
+  HEMA
 }
 
 model Chem {

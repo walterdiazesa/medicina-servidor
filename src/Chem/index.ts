@@ -13,14 +13,8 @@ const parseChemNX500 = (chemData: string) => {
   const Test: Partial<Test> = {};
   const text = chemData.replace(/\s/g, "");
   const parseText = text.split(",");
-  const sex =
-    parseText[7] === "1"
-      ? "Masculino"
-      : parseText[7] === "2"
-      ? "Femenino"
-      : "No especificado";
   const cantidadPruebas = parseInt(parseText[11]);
-  Test["sex"] = sex;
+  Test.category = "DRYCHEM";
   const testJson: TestItem[] = [];
   for (let i = 12; i < 12 + cantidadPruebas * 6; i += 7) {
     const boolTestJson =

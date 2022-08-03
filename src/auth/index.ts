@@ -13,6 +13,7 @@ export const signJWT = (payload: Partial<Payload>) => {
   delete payload.iat;
   delete payload.exp;
   delete payload.iss;
+  if (!payload["sub-lab"]) payload["sub-lab"] = [];
   return jsonwebtoken.sign(payload, process.env.JWT_SECRET.trim(), {
     issuer: "medicina-servidor",
     algorithm: "HS256",

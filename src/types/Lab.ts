@@ -22,6 +22,7 @@ export type Lab = {
 export type LabPreferences = {
   useTestCustomId: boolean;
   leadingZerosWhenCustomId: number;
+  customIdStartFrom?: number;
   useQR: boolean;
 };
 

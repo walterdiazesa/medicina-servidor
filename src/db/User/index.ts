@@ -1,5 +1,5 @@
 import { Prisma, User } from "@prisma/client";
-import { signJWT } from "../../auth/index.js";
+import { login, signJWT } from "../../auth/index.js";
 import {
   getSignedFileUrl,
   SIGNATURES_SIGNED_URL_EXPIRE,
@@ -189,8 +189,12 @@ export async function createUser({
       data: { userIds: { push: user.id } },
       select: { id: true },
     });
+    const userHaveLab = await login(email, password);
     return {
-      access_token: signJWT({ "sub-user": user.id, sub: user.email }),
+      access_token:
+        userHaveLab instanceof ResponseError
+          ? signJWT({ "sub-user": user.id, sub: user.email })
+          : userHaveLab.access_token,
       user,
     };
   } catch (e) {
@@ -223,8 +227,12 @@ export async function createUser({
             data: { userIds: { push: user.id } },
             select: { id: true },
           });
+          const userHaveLab = await login(email, password);
           return {
-            access_token: signJWT({ "sub-user": user.id, sub: user.email }),
+            access_token:
+              userHaveLab instanceof ResponseError
+                ? signJWT({ "sub-user": user.id, sub: user.email })
+                : userHaveLab.access_token,
             user,
           };
         } catch (eIn) {

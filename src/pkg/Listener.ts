@@ -14,9 +14,7 @@ const AES_ALGORITHM = "aes-256-cbc";
 const PORT = ENV === "DEV" ? 8079 : 8080;
 const SERVIDOR_HOST =
   // @ts-ignore
-  ENV === "DEV"
-    ? "http://localhost:8080"
-    : "https://medicina-servidor-tu6et.ondigitalocean.app";
+  ENV === "DEV" ? "http://localhost:8080" : process.env.API_HOST;
 
 const rsaEncrypt = (data: string) => {
   return crypto

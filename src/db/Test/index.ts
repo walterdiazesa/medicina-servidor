@@ -19,6 +19,7 @@ import {
   getSignedFileUrl,
   SIGNATURES_SIGNED_URL_EXPIRE,
 } from "../../aws/s3.js";
+import { LabPreferences } from "../../types/Lab.js";
 
 export async function getTest(id: string) {
   // if (process.env.NODE_ENV.trim() === "DEV") return tests[0];
@@ -136,7 +137,7 @@ export async function getTests(
         select: { name: true },
       },
       patient: {
-        select: { dui: true, name: true, phone: true, email: true },
+        select: { dui: true, name: true, phone: true, email: true, sex: true },
       },
     },
   });
@@ -157,15 +158,41 @@ export async function createTest(
   if (!parsedChemData)
     return new ResponseError({ error: "Invalid chemData", key: "chemdata" });
 
+  const lab = await prisma.lab.findFirst({
+    where: { id: listener.labId },
+    select: { preferences: true },
+  });
+
   const test = await prisma.test.create({
     data: {
       ...parsedChemData,
       date: new Date(),
       labId: listener.labId,
       customId:
-        (await prisma.test.count({ where: { labId: listener.labId } })) + 1,
+        (lab.preferences as LabPreferences).customIdStartFrom ??
+        (
+          await prisma.test.findFirst({
+            where: { labId: listener.labId, isDeleted: false },
+            select: { customId: true },
+            take: -1,
+          })
+        )?.customId + 1,
     },
   });
+
+  if ((lab.preferences as LabPreferences).customIdStartFrom)
+    prisma.lab
+      .update({
+        where: { id: listener.labId },
+        data: {
+          preferences: (({ customIdStartFrom, ...p }) => p)(
+            lab.preferences as LabPreferences
+          ) as unknown as Prisma.JsonValue,
+        },
+        select: { id: true },
+      })
+      .then(() => {});
+
   prisma.listenerRequest
     .create({
       data: {
@@ -434,6 +461,7 @@ export async function requestValidation(
       to: validator.email,
       subject: `"${test.lab.name}" te ha solicitado una validación`,
       html: validateByRequest({ test, validator, validationByRequestHash }),
+      priority: "high",
     });
 
     return true;

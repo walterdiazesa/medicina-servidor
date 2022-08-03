@@ -110,7 +110,7 @@ export const login = async (
 
   payload["sub"] = user?.email || lab?.email;
   payload["img"] =
-    lab?.img || ((payload["sub-lab"] as string[]).length === 1 && isLabAndImg);
+    lab?.img || ((payload["sub-lab"] as string[])?.length === 1 && isLabAndImg);
 
   return { access_token: signJWT(payload), payload };
 };

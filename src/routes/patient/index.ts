@@ -1,5 +1,9 @@
 import { Router } from "express";
-import { createPatient, getPatient } from "../../db/Patient/index.js";
+import {
+  createPatient,
+  getPatient,
+  updatePatient,
+} from "../../db/Patient/index.js";
 import { ResponseError } from "../../types/Responses/error.js";
 import { normalize } from "../../utils/index.js";
 import { authGuard } from "../middlewares/index.js";
@@ -16,6 +20,12 @@ router.post("/", authGuard, async (req, res) => {
   const patient = await createPatient(req.body);
   if (patient instanceof ResponseError) res.status(400);
   else res.status(201);
+  res.send(patient);
+});
+
+router.patch("/:id", authGuard, async (req, res) => {
+  const patient = await updatePatient(req.params.id, req.body);
+  if (patient instanceof ResponseError) res.status(400);
   res.send(patient);
 });
 

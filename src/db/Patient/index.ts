@@ -73,3 +73,19 @@ export async function createPatient(data: Patient) {
     console.error({ e });
   }
 }
+
+export async function updatePatient(id: string, data: Patient) {
+  try {
+    return await prisma.patient.update({ data, where: { id } });
+  } catch (e) {
+    /* !@unique */
+    if (e.code === "P2002" && e.meta) {
+      return NotUnique(
+        (e.meta["target"] as string)
+          .replace("Patient_", "")
+          .replace("_key", "") as ResponseErrorDataKey
+      );
+    }
+    console.error({ e });
+  }
+}

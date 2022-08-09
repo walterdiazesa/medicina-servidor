@@ -446,6 +446,9 @@ export async function updateLab(id: string, lab: Partial<Lab>) {
     delete lab.ownerIds;
     delete lab.rsaPrivateKey;
     delete lab.userIds;
+    delete lab.createdAt;
+    delete lab.stamp;
+    delete lab.signature;
 
     if (lab.preferences) {
       if (

@@ -275,7 +275,14 @@ export async function updateTest(
       error: "Not enough permissions for this action",
       key: "role",
     });
-  if (data.id) delete data.id;
+
+  delete data.id;
+  delete data.category;
+  delete data.customId;
+  delete data.date;
+  delete data.labId;
+  delete data.isDeleted;
+
   if (data.patientId && !isValidObjectID(data.patientId))
     return InvalidFormat("patientid");
   if (data.issuerId && !isValidObjectID(data.issuerId))

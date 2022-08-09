@@ -6,3 +6,7 @@ export const normalize = (string: string) => {
     .replace(/\s/g, " ")
     .toLowerCase();
 };
+
+const REGEX_NAME =
+  /^([a-zA-ZàèìòùÀÈÌÒÙáéíóúýÁÉÍÓÚÝâêîôûÂÊÎÔÛãñõÃÑÕäëïöüÿÄËÏÖÜŸ'\-]{2,20}) ([a-zA-ZàèìòùÀÈÌÒÙáéíóúýÁÉÍÓÚÝâêîôûÂÊÎÔÛãñõÃÑÕäëïöüÿÄËÏÖÜŸ'\-]{2,20} {0,1}){1,9}$/;
+export const isName = (name: string) => REGEX_NAME.test(name);

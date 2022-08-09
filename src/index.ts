@@ -23,6 +23,7 @@ import { verifyJWT } from "./auth/index.js";
 import { getLaboratories } from "./db/Lab/index.js";
 import { parseQueryBoolean } from "./routes/middlewares/index.js";
 import { getFileUploadUrl } from "./aws/s3.js";
+import { validationGuard } from "./routes/middlewares/validation/index.js";
 
 const numCpus = cpus().length;
 
@@ -88,6 +89,7 @@ if (cluster.isPrimary) {
   app.use(express.json());
   app.use(cookieParser);
   app.use(parseQueryBoolean());
+  app.use(validationGuard);
 
   app.get("/", (req, res) => res.status(200).send());
 

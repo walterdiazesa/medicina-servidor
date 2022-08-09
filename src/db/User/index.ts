@@ -251,6 +251,10 @@ export async function updateUser(id: string, user: Partial<User>) {
   try {
     delete user.hash;
     delete user.id;
+    delete user.createdAt;
+    delete user.labIds;
+    delete user.ownerIds;
+    delete user.slug;
 
     return await prisma.user.update({
       where: { id },

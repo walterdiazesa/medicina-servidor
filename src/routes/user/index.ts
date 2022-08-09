@@ -24,7 +24,7 @@ const router = Router();
 router.get("/me", authGuard, async (req: AuthRequest, res) =>
   res.send(await getUser(req.user["sub-user"], true))
 );
-router.patch("/me", authGuard, async (req: AuthRequest, res) => {
+/* router.patch("/me", authGuard, async (req: AuthRequest, res) => {
   if (!req.user["sub-user"])
     return res.status(403).send(
       new ResponseError({
@@ -43,7 +43,7 @@ router.patch("/me", authGuard, async (req: AuthRequest, res) => {
       sameSite: process.env.NODE_ENV.trim() === "PROD" ? "none" : undefined,
     });
   res.send(user);
-});
+}); */
 router.get(["/", "/:lab"], authGuard, async (req: AuthRequest, res) => {
   if (!req.user["sub-lab"].length)
     return res.status(403).send(

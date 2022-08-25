@@ -8,21 +8,21 @@ import { prisma } from "../db/handler.js";
 
 //#region @deprecated
 function setLicenseListener(license: string) {
-  const data = fs.readFileSync("./Listener.js", "utf-8");
+  const data = fs.readFileSync("./Listener.ts", "utf-8");
   const dataWithLicense = data.replace("%LICENSE%", license);
-  fs.writeFileSync("./Listener.js", dataWithLicense, "utf-8");
+  fs.writeFileSync("./Listener.ts", dataWithLicense, "utf-8");
 }
 function clearLicenseListener(license: string) {
-  const data = fs.readFileSync("./Listener.js", "utf-8");
+  const data = fs.readFileSync("./Listener.ts", "utf-8");
   const defaultData = data.replace(license, "%LICENSE%");
-  fs.writeFileSync("./Listener.js", defaultData, "utf-8");
+  fs.writeFileSync("./Listener.ts", defaultData, "utf-8");
 }
 //#endregion
 
 const LISTENER_BUCKET = "listener";
 
-const getListenerName = (labId: string = "", ext: "exe" | "js" = "js") =>
-  path.resolve("dist", "pkg", `Listener${labId}.${ext}`);
+const getListenerName = (labId: string = "", ext: "exe" | "ts" = "ts") =>
+  path.resolve("src", "pkg", `Listener${labId}.${ext}`);
 
 const generateListenerFile = (labId: string, rsaPublicKey: string) => {
   const data = fs.readFileSync(getListenerName(), "utf-8");
@@ -36,7 +36,7 @@ const generateListenerFile = (labId: string, rsaPublicKey: string) => {
   fs.writeFileSync(getListenerName(labId), dataWithLicenseHash, "utf-8");
 };
 
-const removeListenerFile = (labId: string, ext: "exe" | "js" = "js") => {
+const removeListenerFile = (labId: string, ext: "exe" | "ts" = "ts") => {
   if (fs.existsSync(getListenerName(labId, ext)))
     fs.unlinkSync(getListenerName(labId, ext));
 };
@@ -56,7 +56,7 @@ export const generateListener = async (labId: string) => {
     "node16-win-x64",
     getListenerName(labId),
     "--out-path",
-    path.resolve("dist", "pkg"),
+    path.resolve("src", "pkg"),
   ]);
   const listenerS3Key = `i${v4()}.exe`;
   const isListenerUploader = await uploadFile(

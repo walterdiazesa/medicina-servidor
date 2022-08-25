@@ -7,7 +7,7 @@ export function cookieParser(req: Request, res: Response, next: NextFunction) {
       .split(";")
       .reduce((obj: { [key: string]: any }, c) => {
         const n = c.split("=");
-        obj[n[0].trim()] = n[1].trim();
+        obj[n[0].trim()] = n[1]?.trim();
         return obj;
       }, {});
   } else req.cookies = {};

@@ -6,22 +6,9 @@ import { uploadFile } from "../aws/s3.js";
 import crypto from "crypto";
 import { prisma } from "../db/handler.js";
 
-//#region @deprecated
-function setLicenseListener(license: string) {
-  const data = fs.readFileSync("./Listener.ts", "utf-8");
-  const dataWithLicense = data.replace("%LICENSE%", license);
-  fs.writeFileSync("./Listener.ts", dataWithLicense, "utf-8");
-}
-function clearLicenseListener(license: string) {
-  const data = fs.readFileSync("./Listener.ts", "utf-8");
-  const defaultData = data.replace(license, "%LICENSE%");
-  fs.writeFileSync("./Listener.ts", defaultData, "utf-8");
-}
-//#endregion
-
 const LISTENER_BUCKET = "listener";
 
-const getListenerName = (labId: string = "", ext: "exe" | "ts" = "ts") =>
+const getListenerName = (labId: string = "", ext: "exe" | "js" = "js") =>
   path.resolve("src", "pkg", `Listener${labId}.${ext}`);
 
 const generateListenerFile = (labId: string, rsaPublicKey: string) => {
@@ -36,7 +23,7 @@ const generateListenerFile = (labId: string, rsaPublicKey: string) => {
   fs.writeFileSync(getListenerName(labId), dataWithLicenseHash, "utf-8");
 };
 
-const removeListenerFile = (labId: string, ext: "exe" | "ts" = "ts") => {
+const removeListenerFile = (labId: string, ext: "exe" | "js" = "js") => {
   if (fs.existsSync(getListenerName(labId, ext)))
     fs.unlinkSync(getListenerName(labId, ext));
 };

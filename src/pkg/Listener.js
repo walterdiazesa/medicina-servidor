@@ -16,7 +16,7 @@ const SERVIDOR_HOST =
   // @ts-ignore
   ENV === "DEV" ? "http://localhost:8080" : process.env.API_HOST;
 
-const rsaEncrypt = (data: string) => {
+const rsaEncrypt = (data) => {
   return crypto
     .publicEncrypt(
       {
@@ -29,7 +29,7 @@ const rsaEncrypt = (data: string) => {
     .toString("hex");
 };
 
-const encrypt = (text: string) => {
+const encrypt = (text) => {
   const iv = crypto.randomBytes(16);
   const key = crypto.randomBytes(32);
   const cipher = crypto.createCipheriv(AES_ALGORITHM, key, iv);
@@ -44,8 +44,7 @@ const encrypt = (text: string) => {
 };
 
 //#region print
-type Color = "yellow" | "green" | "blue" | "white" | "purple" | "red";
-const colorSchema: { [color: string]: string } = {
+const colorSchema = {
   yellow: "\x1b[33m",
   green: "\x1b[32m",
   blue: "\x1b[36m",
@@ -53,14 +52,17 @@ const colorSchema: { [color: string]: string } = {
   purple: "\x1b[35m",
   red: "\x1b[31m",
 };
-const colorKey = (color: Color) => colorSchema[color];
-const print = (text: string) => {
+/**
+ * @param  {"yellow" | "green" | "blue" | "white" | "purple" | "red"} color
+ */
+const colorKey = (color) => colorSchema[color];
+const print = (text) => {
   console.log(`${text}\x1b[0m`);
 };
 //#endregion
 
 // TO-DO: Implement a global chem identifier
-const isChem = (message: string) => true;
+const isChem = (message) => true;
 
 // TCP Server
 const server = new net.Server();
@@ -73,8 +75,8 @@ server.listen(PORT, function () {
   );
 });
 
-server.on("connection", function (socket: any) {
-  socket.on("data", async function (chunk: Buffer) {
+server.on("connection", function (socket) {
+  socket.on("data", async function (chunk) {
     const chemData = chunk.toString();
     if (!isChem(chemData)) return;
     print(`${colorKey("purple")}Nuevo test entrante, enviando al servidor...`);
@@ -112,7 +114,7 @@ server.on("connection", function (socket: any) {
   socket.on("end", function () {
     // console.log("\x1b[31mCerrando conexión con el cliente");
   });
-  socket.on("error", function (err: any) {
+  socket.on("error", function (err) {
     // console.log(`\x1b[31mError: ${JSON.stringify(err)}`);
   });
 });

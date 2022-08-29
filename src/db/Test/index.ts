@@ -170,13 +170,13 @@ export async function createTest(
       labId: listener.labId,
       customId:
         (lab.preferences as LabPreferences).customIdStartFrom ??
-        (
+        ((
           await prisma.test.findFirst({
             where: { labId: listener.labId, isDeleted: false },
             select: { customId: true },
             take: -1,
           })
-        )?.customId + 1,
+        )?.customId ?? 0) + 1,
     },
   });
 

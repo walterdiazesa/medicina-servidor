@@ -6,7 +6,7 @@ export function routesGuard(
   res: Response,
   next: NextFunction
 ) {
-  if (process.env.NODE_ENV.trim() !== "DEV") {
+  if (process.env.NODE_ENV.trim() !== "DEV" && false) {
     const isDomainAllowed = corsWhiteList.includes(req.headers.origin);
     const isOperationAllowed = (path: string, method: string) => {
       if (!isDomainAllowed) {
@@ -18,11 +18,9 @@ export function routesGuard(
       return true;
     };
     if (!isOperationAllowed(req.path, req.method))
-      return res
-        .status(405)
-        .send({
-          message: "La petición no fue hecha desde un dominio autorizado.",
-        });
+      return res.status(405).send({
+        message: "La petición no fue hecha desde un dominio autorizado.",
+      });
   }
   next();
 }

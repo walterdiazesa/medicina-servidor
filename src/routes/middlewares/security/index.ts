@@ -6,7 +6,7 @@ export function routesGuard(
   res: Response,
   next: NextFunction
 ) {
-  if (process.env.NODE_ENV.trim() !== "DEV" && true) {
+  if (process.env.NODE_ENV.trim() !== "DEV" && false) {
     const isDomainAllowed = corsWhiteList.includes(req.headers.origin);
     const isOperationAllowed = (path: string, method: string) => {
       if (!isDomainAllowed) {

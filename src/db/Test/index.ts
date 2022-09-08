@@ -157,6 +157,7 @@ export async function createTest(
   },
   listener: ListenerPayload
 ) {
+  console.log({ chemData });
   // return console.log({ arguments }, { listener });
   const parsedChemData = parseChem(chemData);
   if (!parsedChemData)

@@ -211,8 +211,7 @@ export async function createTest(
       ...data,
       tests: data.tests,
     } */
-  emit({ event: "test_created", to: listener.labId }, test);
-  axios
+  await axios
     .get(`${process.env.APP_HOST}/api/revalidatetest`, {
       params: {
         test: test.id,
@@ -231,6 +230,7 @@ export async function createTest(
       if (e.response.status === 401)
         console.error(`invalid token for revalidating /tests/${test.id}`);
     });
+  emit({ event: "test_created", to: listener.labId }, test);
   return test;
 }
 

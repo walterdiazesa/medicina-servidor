@@ -23,7 +23,7 @@ import { LabPreferences } from "../../types/Lab.js";
 
 export async function getTest(id: string) {
   // if (process.env.NODE_ENV.trim() === "DEV") return tests[0];
-  return await prisma.test.findUnique({
+  const test = await prisma.test.findUnique({
     where: { id },
     include: {
       lab: {
@@ -64,6 +64,8 @@ export async function getTest(id: string) {
       },
     },
   });
+  console.log("getTest", { test, id });
+  return test;
 }
 
 export async function getTestAccess(id: string, user: Payload) {
@@ -111,7 +113,7 @@ export async function getTests(
 ) {
   // if (process.env.NODE_ENV.trim() === "DEV") return tests;
   // console.log({ user });
-  return await prisma.test.findMany({
+  const tests = await prisma.test.findMany({
     take: limit,
     orderBy: { date: order },
     where: {
@@ -141,6 +143,8 @@ export async function getTests(
       },
     },
   });
+  console.log("getTests", { tests, user });
+  return tests;
 }
 
 export async function createTest(

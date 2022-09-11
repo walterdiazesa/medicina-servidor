@@ -17,8 +17,10 @@ export function routesGuard(
       }
       return true;
     };
-    if (!isOperationAllowed(req.path, req.method))
+    if (!isOperationAllowed(req.path, req.method)) {
       console.log("routesGuard", req.path, req.method, req.headers.origin);
+      console.log({ req });
+    }
     /* return res.status(405).send({
         message: "La petición no fue hecha desde un dominio autorizado.",
       }); */

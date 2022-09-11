@@ -29,8 +29,8 @@ const parseChemNX500 = (chemData: string) => {
         range: {
           item: parseInt(parseText[i + 3]),
           between: {
-            from: parseInt(parseText[i + 4]),
-            to: parseInt(parseText[i + 5]),
+            from: parseFloat(parseText[i + 4]) || 0,
+            to: parseFloat(parseText[i + 5]) || 0,
           },
         },
       }),

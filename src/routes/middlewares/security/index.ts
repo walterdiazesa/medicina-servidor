@@ -18,7 +18,16 @@ export function routesGuard(
       return true;
     };
     if (!isOperationAllowed(req.path, req.method)) {
-      console.log("routesGuard", req.path, req.method, req.headers.origin);
+      console.log(
+        "routesGuard",
+        req.path,
+        req.method,
+        req.headers.origin,
+        req.get("origin"),
+        req.ip,
+        req.headers["access-control-allow-origin"],
+        req.rawHeaders
+      );
       console.log({ req });
     }
     /* return res.status(405).send({

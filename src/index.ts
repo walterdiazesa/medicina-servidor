@@ -129,7 +129,6 @@ if (cluster.isPrimary) {
   _io.push({ cluster: cluster.worker!.id, io });
   io.on("connection", (socket) => {
     const headers = socket.request.headers;
-    console.log("socket", headers.origin);
     if (headers.origin) {
       if (!corsWhiteList.includes(headers.origin)) return socket.disconnect();
       const cookies: { [key: string]: string } = {};

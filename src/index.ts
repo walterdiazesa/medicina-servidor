@@ -103,7 +103,6 @@ if (cluster.isPrimary) {
 
   const server = app.listen(
     process.env.PORT ? parseInt(process.env.PORT) : 8080,
-    "localhost",
     () => console.log("Medicina API running...", process.env.PORT || 8080)
   );
   const io = new SocketIOServer(server, {

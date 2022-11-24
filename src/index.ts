@@ -41,7 +41,7 @@ if (process.env.NODE_ENV.trim() === "DEV")
   corsWhiteList.push("http://localhost:3000");
 
 // && process.env.NODE_ENV.trim() !== "DEV"
-if (cluster.isPrimary) {
+if (cluster.isPrimary && process.env.USE_MASTER_THREAD?.trim() !== "true") {
   for (var i = 0; i < numCpus; i++) {
     cluster.fork();
   }
@@ -125,7 +125,7 @@ if (cluster.isPrimary) {
     })
     .catch((e) => console.log("Can't connect to the Redis PubSub Client"));
 
-  _io.push({ cluster: cluster.worker!.id, io });
+  if (cluster.worker) _io.push({ cluster: cluster.worker.id, io });
   io.on("connection", (socket) => {
     const headers = socket.request.headers;
     if (headers.origin) {

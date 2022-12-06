@@ -238,7 +238,6 @@ export async function createLaboratory({
       lab,
     };
   } catch (e) {
-    console.log({ e });
     /* !@unique */
     if (e.code === "P2002" && e.meta) {
       return NotUnique(

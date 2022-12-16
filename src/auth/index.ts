@@ -143,7 +143,11 @@ export async function changePassword(
     await Promise.allSettled(updatePassAccounts);
     return true;
   } catch (e) {
-    console.error(e);
+    console.error(
+      new Date().toLocaleString(),
+      "🔐 \x1b[35m(src/auth/index.ts > changePassword)\x1b[0m",
+      `\x1b[31m${JSON.stringify(e)}\x1b[0m`
+    );
     return false;
   }
 }

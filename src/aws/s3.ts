@@ -24,7 +24,11 @@ export const uploadFile = async (
   const s3Response = await s3.putObject(params).promise();
   if (s3Response.$response.error) {
     const error = s3Response as unknown as AWSSDK.AWSError;
-    console.log({ path: "uploadFile", error });
+    console.error(
+      new Date().toLocaleString(),
+      "🗳 \x1b[35m(src/aws/s3.ts > uploadFile)\x1b[0m",
+      `\x1b[31m${JSON.stringify(error)}\x1b[0m`
+    );
     return false;
   }
   // const data = s3Response as AWSSDK.S3.PutObjectOutput;
@@ -46,7 +50,11 @@ export const getSignedFileUrl = async (
       Expires: expireSeconds,
     });
   } catch (error) {
-    console.error({ path: "getSignedFileUrl", error });
+    console.error(
+      new Date().toLocaleString(),
+      "🗳 \x1b[35m(src/aws/s3.ts > getSignedFileUrl)\x1b[0m",
+      `\x1b[31m${JSON.stringify(error)}\x1b[0m`
+    );
     return null;
   }
 };
@@ -62,7 +70,11 @@ export const getFileUploadUrl = async (
       Expires,
     });
   } catch (error) {
-    console.error({ path: "getFileUploadUrl", error });
+    console.error(
+      new Date().toLocaleString(),
+      "🗳 \x1b[35m(src/aws/s3.ts > getFileUploadUrl)\x1b[0m",
+      `\x1b[31m${JSON.stringify(error)}\x1b[0m`
+    );
     return null;
   }
 };

@@ -198,6 +198,11 @@ export async function createUser({
       user,
     };
   } catch (e) {
+    console.error(
+      new Date().toLocaleString(),
+      "🙎‍♂️ \x1b[35m(src/db/User/index.ts > createUser > e)\x1b[0m",
+      `\x1b[31m${JSON.stringify(e)}\x1b[0m`
+    );
     /* !@unique */
     if (e.code === "P2002" && e.meta) {
       if (e.meta["target"] === "User_slug_key") {
@@ -236,13 +241,15 @@ export async function createUser({
             user,
           };
         } catch (eIn) {
-          console.error(eIn);
+          console.error(
+            new Date().toLocaleString(),
+            "🙎‍♂️ \x1b[35m(src/db/User/index.ts > createUser > eIn)\x1b[0m",
+            `\x1b[31m${JSON.stringify(eIn)}\x1b[0m`
+          );
         }
       } else if (e.meta["target"] === "User_email_key") {
         return NotUnique("email");
       }
-    } else {
-      console.error(e);
     }
   }
 }
@@ -267,7 +274,11 @@ export async function updateUser(id: string, user: Partial<User>) {
       },
     });
   } catch (e) {
-    console.error(e);
+    console.error(
+      new Date().toLocaleString(),
+      "🙎‍♂️ \x1b[35m(src/db/User/index.ts > updateUser)\x1b[0m",
+      `\x1b[31m${JSON.stringify(e)}\x1b[0m`
+    );
     return false;
   }
 }

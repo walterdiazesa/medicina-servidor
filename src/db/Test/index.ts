@@ -64,12 +64,10 @@ export async function getTest(id: string) {
       },
     },
   });
-  console.log("getTest", { test, id });
   return test;
 }
 
 export async function getTestAccess(id: string, user: Payload) {
-  // if (process.env.NODE_ENV.trim() === "DEV") return tests[0];
   return (
     (await prisma.test.count({
       where: {
@@ -111,8 +109,6 @@ export async function getTests(
   { limit, order = "asc" }: DefaultSelectMany,
   user: Payload
 ) {
-  // if (process.env.NODE_ENV.trim() === "DEV") return tests;
-  // console.log({ user });
   const tests = await prisma.test.findMany({
     take: limit,
     orderBy: { date: order },
@@ -143,7 +139,6 @@ export async function getTests(
       },
     },
   });
-  console.log("getTests", { tests, user });
   return tests;
 }
 
@@ -157,8 +152,14 @@ export async function createTest(
   },
   listener: ListenerPayload
 ) {
-  console.log({ chemData });
-  // return console.log({ arguments }, { listener });
+  console.log(
+    "\x1b[33mparsingChemData 🤖 \x1b[35m(src/db/Test/index.ts > createTest)\x1b[0m",
+    {
+      listener: `{ ip: ${listener.ip}, labId: ${listener.labId} }`,
+      listenerUsername,
+      chemData: `\x1b[36m${chemData}\x1b[0m`,
+    }
+  );
   const parsedChemData = parseChem(chemData);
   if (!parsedChemData)
     return new ResponseError({ error: "Invalid chemData", key: "chemdata" });
@@ -220,15 +221,15 @@ export async function createTest(
     })
     .then(({ status }) => {
       if (status === 500)
-        console.error(`revalidation on /tests/${test.id} failed!`);
+        console.error(`⛔️ revalidation on /tests/${test.id} failed!`);
       if (status === 401)
-        console.error(`invalid token for revalidating /tests/${test.id}`);
+        console.error(`⛔️ invalid token for revalidating /tests/${test.id}`);
     })
     .catch((e) => {
       if (e.response.status === 500)
-        console.error(`revalidation on /tests/${test.id} failed!`);
+        console.error(`⛔️ revalidation on /tests/${test.id} failed!`);
       if (e.response.status === 401)
-        console.error(`invalid token for revalidating /tests/${test.id}`);
+        console.error(`⛔️ invalid token for revalidating /tests/${test.id}`);
     });
   emit({ event: "test_created", to: listener.labId }, test);
   return test;
@@ -378,20 +379,24 @@ export async function updateTest(
       })
       .then(({ status }) => {
         if (status === 500)
-          console.error(`revalidation on /tests/${id} failed!`);
+          console.error(`⛔️ revalidation on /tests/${id} failed!`);
         if (status === 401)
-          console.error(`invalid token for revalidating /tests/${id}`);
+          console.error(`⛔️ invalid token for revalidating /tests/${id}`);
       })
       .catch((e) => {
         if (e.response.status === 500)
-          console.error(`revalidation on /tests/${id} failed!`);
+          console.error(`⛔️ revalidation on /tests/${id} failed!`);
         if (e.response.status === 401)
-          console.error(`invalid token for revalidating /tests/${id}`);
+          console.error(`⛔️ invalid token for revalidating /tests/${id}`);
       });
     return test;
   } catch (e) {
     // if (e.code !== "P2016") P2016 = RecordNotFound
-    console.error(e);
+    console.error(
+      new Date().toLocaleString(),
+      "🧪 \x1b[35m(src/db/Test/index.ts > updateTest)\x1b[0m",
+      `\x1b[31m${JSON.stringify(e)}\x1b[0m`
+    );
   }
 }
 
@@ -478,7 +483,11 @@ export async function requestValidation(
 
     return true;
   } catch (e) {
-    console.error(e);
+    console.error(
+      new Date().toLocaleString(),
+      "🧪 \x1b[35m(src/db/Test/index.ts > requestValidation)\x1b[0m",
+      `\x1b[31m${JSON.stringify(e)}\x1b[0m`
+    );
     return new ResponseError({
       error: "Something went wrong",
       key: e.message.toLowerCase(),
@@ -503,19 +512,23 @@ export async function validateTest(id: string, validatorId: string) {
         })
         .then(({ status }) => {
           if (status === 500)
-            console.error(`revalidation on /tests/${id} failed!`);
+            console.error(`⛔️ revalidation on /tests/${id} failed!`);
           if (status === 401)
-            console.error(`invalid token for revalidating /tests/${id}`);
+            console.error(`⛔️ invalid token for revalidating /tests/${id}`);
         })
         .catch((e) => {
           if (e.response.status === 500)
-            console.error(`revalidation on /tests/${id} failed!`);
+            console.error(`⛔️ revalidation on /tests/${id} failed!`);
           if (e.response.status === 401)
-            console.error(`invalid token for revalidating /tests/${id}`);
+            console.error(`⛔️ invalid token for revalidating /tests/${id}`);
         });
   } catch (e) {
     // if (e.code !== "P2016") P2016 = RecordNotFound
-    console.error(e);
+    console.error(
+      new Date().toLocaleString(),
+      "🧪 \x1b[35m(src/db/Test/index.ts > validateTest)\x1b[0m",
+      `\x1b[31m${JSON.stringify(e)}\x1b[0m`
+    );
     return new ResponseError({
       error: "Something went wrong",
       key: e.message.toLowerCase(),

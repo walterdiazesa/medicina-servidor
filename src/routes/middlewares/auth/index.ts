@@ -93,7 +93,11 @@ export async function listenerGuard(
 
     req.body = body;
   } catch (e) {
-    console.log(e);
+    console.error(
+      new Date().toLocaleString(),
+      "🔐 \x1b[35m(src/routes/middlewares/auth/index.ts > listenerGuard)\x1b[0m",
+      `\x1b[31m${JSON.stringify(e)}\x1b[0m`
+    );
     switch (bodyStep) {
       case "Decrypt":
         return res.status(400).send(

@@ -19,7 +19,7 @@ export function routesGuard(
     };
     if (!isOperationAllowed(req.path, req.method)) {
       console.log(
-        "routesGuard",
+        "\x1b[34m🔒 routesGuard \x1b[35m(src/routes/middlewares/security/index.ts)\x1b[0m",
         req.path,
         req.method,
         req.headers.origin,
@@ -28,7 +28,6 @@ export function routesGuard(
         req.headers["access-control-allow-origin"],
         req.rawHeaders
       );
-      console.log({ req });
     }
     /* return res.status(405).send({
         message: "La petición no fue hecha desde un dominio autorizado.",

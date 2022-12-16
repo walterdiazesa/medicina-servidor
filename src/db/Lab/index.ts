@@ -238,6 +238,11 @@ export async function createLaboratory({
       lab,
     };
   } catch (e) {
+    console.error(
+      new Date().toLocaleString(),
+      "🏥 \x1b[35m(src/db/Lab/index.ts > createLaboratory)\x1b[0m",
+      `\x1b[31m${JSON.stringify(e)}\x1b[0m`
+    );
     /* !@unique */
     if (e.code === "P2002" && e.meta) {
       return NotUnique(
@@ -309,7 +314,11 @@ export async function upsertOwner(
     }
     return true;
   } catch (e) {
-    console.error(e);
+    console.error(
+      new Date().toLocaleString(),
+      "🏥 \x1b[35m(src/db/Lab/index.ts > upsertOwner)\x1b[0m",
+      `\x1b[31m${JSON.stringify(e)}\x1b[0m`
+    );
     return false;
   }
 }
@@ -515,7 +524,11 @@ export async function updateLab(id: string, lab: Partial<Lab>) {
       select: labPublicSelect,
     })) as Lab;
   } catch (e) {
-    console.error(e);
+    console.error(
+      new Date().toLocaleString(),
+      "🏥 \x1b[35m(src/db/Lab/index.ts > updateLab)\x1b[0m",
+      `\x1b[31m${JSON.stringify(e)}\x1b[0m`
+    );
     return false;
   }
 }
@@ -573,7 +586,11 @@ export async function updateSignatures(
 
     return lab;
   } catch (e) {
-    console.error(e);
+    console.error(
+      new Date().toLocaleString(),
+      "🏥 \x1b[35m(src/db/Lab/index.ts > updateSignatures)\x1b[0m",
+      `\x1b[31m${JSON.stringify(e)}\x1b[0m`
+    );
     return false;
   }
 }

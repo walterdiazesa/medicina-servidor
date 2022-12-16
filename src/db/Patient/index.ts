@@ -77,6 +77,11 @@ export async function createPatient(data: Patient) {
   try {
     return await prisma.patient.create({ data });
   } catch (e) {
+    console.error(
+      new Date().toLocaleString(),
+      "🤕 \x1b[35m(src/db/Patient/index.ts > createPatient)\x1b[0m",
+      `\x1b[31m${JSON.stringify(e)}\x1b[0m`
+    );
     /* !@unique */
     if (e.code === "P2002" && e.meta) {
       return NotUnique(
@@ -85,7 +90,6 @@ export async function createPatient(data: Patient) {
           .replace("_key", "") as ResponseErrorDataKey
       );
     }
-    console.error({ e });
   }
 }
 
@@ -93,6 +97,11 @@ export async function updatePatient(id: string, data: Patient) {
   try {
     return await prisma.patient.update({ data, where: { id } });
   } catch (e) {
+    console.error(
+      new Date().toLocaleString(),
+      "🤕 \x1b[35m(src/db/Patient/index.ts > updatePatient)\x1b[0m",
+      `\x1b[31m${JSON.stringify(e)}\x1b[0m`
+    );
     /* !@unique */
     if (e.code === "P2002" && e.meta) {
       return NotUnique(
@@ -101,6 +110,5 @@ export async function updatePatient(id: string, data: Patient) {
           .replace("_key", "") as ResponseErrorDataKey
       );
     }
-    console.error({ e });
   }
 }

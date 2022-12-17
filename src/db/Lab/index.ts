@@ -44,7 +44,8 @@ const LAB_PREFERENCES: LabPreferences = Object.freeze({
 export async function getLaboratory(
   lab: string[],
   completeLabInfo?: boolean,
-  fields?: Prisma.LabSelect
+  fields?: Prisma.LabSelect,
+  employee?: Payload
 ) {
   const userInfo: Prisma.UserSelect = {
     id: true,
@@ -75,7 +76,10 @@ export async function getLaboratory(
   };
   if (lab.length > 1) {
     const labs = (await prisma.lab.findMany({
-      where: { id: { in: lab } },
+      where: {
+        id: { in: lab },
+        ...(employee && { userIds: { has: employee["sub-user"] } }),
+      },
       select,
     })) as Lab[];
     for (let i = 0; i < labs.length; i++) {
@@ -98,7 +102,10 @@ export async function getLaboratory(
   }
   const _lab = isValidObjectID(lab[0])
     ? ((await prisma.lab.findUnique({
-        where: { id: lab[0] },
+        where: {
+          id: lab[0],
+          ...(employee && { userIds: { has: employee["sub-user"] } }),
+        },
         select,
       })) as Lab)
     : ((await prisma.lab.findFirst({

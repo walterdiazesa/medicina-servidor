@@ -26,10 +26,10 @@ router.get("/", authGuard, async (req: AuthRequest, res) =>
   res.send(await getLaboratories(req.query, req.user))
 );
 router.get(["/mine", "/mine/:id"], authGuard, async (req: AuthRequest, res) => {
-  if (!req.user["sub-lab"].length)
+  /* if (!req.user["sub-lab"].length)
     return res
       .status(403)
-      .send(new ResponseError({ error: "Not a lab user", key: "role" }));
+      .send(new ResponseError({ error: "Not a lab user", key: "role" })); */
   if (!req.params.id)
     return res.send(
       await getLaboratory(
@@ -37,14 +37,19 @@ router.get(["/mine", "/mine/:id"], authGuard, async (req: AuthRequest, res) => {
         Boolean(req.query.completeLabInfo)
       )
     );
-  if (!req.user["sub-lab"].includes(req.params.id))
+  /* if (!req.user["sub-lab"].includes(req.params.id))
     return res
       .status(403)
       .send(
         new ResponseError({ error: "Not a user from this lab", key: "role" })
-      );
+      ); */
   res.send(
-    await getLaboratory([req.params.id], false, req.query.fields as any)
+    await getLaboratory(
+      [req.params.id],
+      false,
+      req.query.fields as any,
+      req.user["sub-lab"].includes(req.params.id) ? undefined : req.user
+    )
   );
 });
 router.get("/mine/:id/:access/:test", async (req: AuthRequest, res) => {

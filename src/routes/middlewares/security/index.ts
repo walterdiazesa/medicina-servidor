@@ -25,7 +25,7 @@ export function routesGuard(
     if (
       !isOperationAllowed(req.path, req.method) &&
       !UserAgentAllowed.some((agent) =>
-        req.headers["user-agent"].includes(agent)
+        (req.headers["user-agent"] || "").includes(agent)
       )
     ) {
       console.log(

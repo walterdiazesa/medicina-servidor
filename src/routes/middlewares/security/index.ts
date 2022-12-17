@@ -7,15 +7,6 @@ export function routesGuard(
   next: NextFunction
 ) {
   if (process.env.NODE_ENV.trim() !== "DEV") {
-    console.log(
-      "\x1b[34m❌🔒 routesGuard \x1b[35m(src/routes/middlewares/security/index.ts)\x1b[0m",
-      `\x1b[33m${req.method} \x1b[0m${req.path}\n`,
-      `\x1b[36mOrigin: \x1b[0m${req.headers.origin}\n`,
-      `\x1b[36mIP (x-forwarded-for): \x1b[0m${req.headers["x-forwarded-for"]}\n`,
-      `\x1b[36mIP (remoteAddress): \x1b[0m${req.socket.remoteAddress}\n`,
-      `\x1b[36mIP (User-Agent): \x1b[0m${req.headers["user-agent"]}\n`,
-      JSON.stringify(req.rawHeaders)
-    );
     const isDomainAllowed = corsWhiteList.includes(req.headers.origin);
     const UserAgentAllowed = [
       "https://github.com/sindresorhus/got",
@@ -40,10 +31,9 @@ export function routesGuard(
         "\x1b[34m❌🔒 routesGuard \x1b[35m(src/routes/middlewares/security/index.ts)\x1b[0m",
         `\x1b[33m${req.method} \x1b[0m${req.path}\n`,
         `\x1b[36mOrigin: \x1b[0m${req.headers.origin}\n`,
-        `\x1b[36mIP (x-forwarded-for): \x1b[0m${req.headers["x-forwarded-for"]}\n`,
-        `\x1b[36mIP (remoteAddress): \x1b[0m${req.socket.remoteAddress}\n`,
-        `\x1b[36mIP (User-Agent): \x1b[0m${req.headers["user-agent"]}\n`,
-        JSON.stringify(req.rawHeaders)
+        `\x1b[36mIP: \x1b[0m${req.headers["x-forwarded-for"]}\n`,
+        `\x1b[36mUser-Agent: \x1b[0m${req.headers["user-agent"]}\n`,
+        req.rawHeaders
       );
       return res.status(405).send({
         message: "La petición no fue hecha desde un dominio autorizado.",

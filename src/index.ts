@@ -47,8 +47,8 @@ if (cluster.isPrimary && process.env.USE_MASTER_THREAD?.trim() !== "true") {
   }
 
   cluster.on("exit", function (worker, code, signal) {
-    console.log(
-      "Worker %d died with code/signal %s. Restarting worker...",
+    console.error(
+      "🤖 Worker %d died with code/signal %s. Restarting worker...",
       worker.process.pid,
       signal || code
     );

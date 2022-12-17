@@ -101,7 +101,7 @@ export async function getLaboratory(
     return labs;
   }
   const _lab = isValidObjectID(lab[0])
-    ? ((await prisma.lab.findUnique({
+    ? ((await prisma.lab.findFirst({
         where: {
           id: lab[0],
           ...(employee && { userIds: { has: employee["sub-user"] } }),

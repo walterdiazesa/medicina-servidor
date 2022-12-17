@@ -100,7 +100,9 @@ export const login = async (
       select: { id: true },
     });
     if (labsWhoOwn && labsWhoOwn.length) {
-      (payload["sub-lab"] as string[]).push(...labsWhoOwn.map(({ id }) => id));
+      ((payload["sub-lab"] || []) as string[]).push(
+        ...labsWhoOwn.map(({ id }) => id)
+      );
       payload["sub-lab"] = Array.from(new Set(payload["sub-lab"] as string[]));
     }
   }

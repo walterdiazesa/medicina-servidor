@@ -8,16 +8,19 @@ export function routesGuard(
 ) {
   if (process.env.NODE_ENV.trim() !== "DEV") {
     console.log(
-      "\x1b[34m🔒 routesGuard \x1b[35m(src/routes/middlewares/security/index.ts)\x1b[0m",
-      req.path,
-      req.method,
-      req.headers.origin,
-      req.get("origin"),
-      req.ip,
-      req.headers["access-control-allow-origin"],
-      req.rawHeaders
+      "\x1b[34m❌🔒 routesGuard \x1b[35m(src/routes/middlewares/security/index.ts)\x1b[0m",
+      `\x1b[33m${req.method} \x1b[0m${req.path}\n`,
+      `\x1b[36mOrigin: \x1b[0m${req.headers.origin}\n`,
+      `\x1b[36mIP (x-forwarded-for): \x1b[0m${req.headers["x-forwarded-for"]}\n`,
+      `\x1b[36mIP (remoteAddress): \x1b[0m${req.socket.remoteAddress}\n`,
+      `\x1b[36mIP (User-Agent): \x1b[0m${req.headers["user-agent"]}\n`,
+      JSON.stringify(req.rawHeaders)
     );
     const isDomainAllowed = corsWhiteList.includes(req.headers.origin);
+    const UserAgentAllowed = [
+      "https://github.com/sindresorhus/got",
+      "Vercelbot",
+    ];
     const isOperationAllowed = (path: string, method: string) => {
       if (!isDomainAllowed) {
         if (path.startsWith("/test") && ["GET", "PUT"].includes(method))
@@ -27,21 +30,25 @@ export function routesGuard(
       }
       return true;
     };
-    if (!isOperationAllowed(req.path, req.method)) {
+    if (
+      !isOperationAllowed(req.path, req.method) &&
+      !UserAgentAllowed.some((agent) =>
+        req.headers["user-agent"].includes(agent)
+      )
+    ) {
       console.log(
-        "\x1b[34m🔒 routesGuard \x1b[35m(src/routes/middlewares/security/index.ts)\x1b[0m",
-        req.path,
-        req.method,
-        req.headers.origin,
-        req.get("origin"),
-        req.ip,
-        req.headers["access-control-allow-origin"],
-        req.rawHeaders
+        "\x1b[34m❌🔒 routesGuard \x1b[35m(src/routes/middlewares/security/index.ts)\x1b[0m",
+        `\x1b[33m${req.method} \x1b[0m${req.path}\n`,
+        `\x1b[36mOrigin: \x1b[0m${req.headers.origin}\n`,
+        `\x1b[36mIP (x-forwarded-for): \x1b[0m${req.headers["x-forwarded-for"]}\n`,
+        `\x1b[36mIP (remoteAddress): \x1b[0m${req.socket.remoteAddress}\n`,
+        `\x1b[36mIP (User-Agent): \x1b[0m${req.headers["user-agent"]}\n`,
+        JSON.stringify(req.rawHeaders)
       );
-    }
-    /* return res.status(405).send({
+      return res.status(405).send({
         message: "La petición no fue hecha desde un dominio autorizado.",
-      }); */
+      });
+    }
   }
   next();
 }

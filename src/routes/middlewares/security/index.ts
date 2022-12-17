@@ -11,6 +11,7 @@ export function routesGuard(
     const UserAgentAllowed = [
       "https://github.com/sindresorhus/got",
       "Vercelbot",
+      "axios/0.27.2",
     ];
     const isOperationAllowed = (path: string, method: string) => {
       if (!isDomainAllowed) {

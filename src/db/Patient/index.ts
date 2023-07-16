@@ -15,6 +15,9 @@ const select: Prisma.PatientSelect = {
   dateBorn: true,
 };
 
+/**
+ * @deprecated use getPatient instead
+ */
 export async function get(patient: string) {
   if (!patient) return null;
   if (isValidObjectID(patient)) {

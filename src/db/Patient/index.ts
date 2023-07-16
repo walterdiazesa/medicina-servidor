@@ -15,9 +15,6 @@ const select: Prisma.PatientSelect = {
   dateBorn: true,
 };
 
-/**
- * @deprecated use getPatient instead
- */
 export async function get(patient: string) {
   if (!patient) return null;
   if (isValidObjectID(patient)) {
@@ -42,7 +39,7 @@ export async function get(patient: string) {
 }
 
 export async function getPatient(patient: string) {
-  /* if (!patient)
+  if (!patient)
     return await prisma.patient.findMany({ select, orderBy: { name: "asc" } });
   const _patients = await prisma.patient.findMany({
     where: {
@@ -56,19 +53,7 @@ export async function getPatient(patient: string) {
     orderBy: { name: "asc" },
     select,
   });
-  return !_patients.length ? null : _patients; */
-  const _patient = await prisma.patient.findFirst({
-    where: {
-      OR: [
-        { email: patient },
-        { dui: patient },
-        { phone: patient },
-        // { name: { contains: patient, mode: "insensitive" } },
-      ],
-    },
-    select,
-  });
-  return _patient ? [_patient] : null;
+  return !_patients.length ? null : _patients;
 }
 
 // Make upsert?

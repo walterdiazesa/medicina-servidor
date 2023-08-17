@@ -13,9 +13,9 @@ jobs:
       - name: Linode Commands
         uses: appleboy/ssh-action@v1.0.0
         with:
-          host: ${{ secrets.IP }}
-          username: ${{ secrets.USER }}
-          password: ${{ secrets.PASSWORD }}
+          host: ${{ secrets.LINODE_IP }}
+          username: ${{ secrets.LINODE_USER }}
+          password: ${{ secrets.LINODE_PASSWORD }}
           port: 22
           script: |
             cd medicina-servidor/

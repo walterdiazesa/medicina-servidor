@@ -20,4 +20,5 @@ jobs:
           script: |
             cd medicina-servidor/
             git pull
+            npm install
             pm2 restart flemik-node

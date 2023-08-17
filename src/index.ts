@@ -1,9 +1,10 @@
 import cluster from "cluster";
-import express, { Request, Response } from "express";
+import express, { Request } from "express";
 import cors from "cors";
 import { cpus } from "os";
 import { Server as SocketIOServer } from "socket.io";
 import "dotenv/config";
+import { trail } from "express-insider";
 
 import {
   testRoutes,
@@ -106,6 +107,15 @@ if (cluster.isPrimary && process.env.USE_MASTER_THREAD?.trim() !== "true") {
     "localhost",
     () => console.log("Medicina API running...", process.env.PORT || 8080)
   );
+
+  trail(app, {
+    showRSS: true,
+    trailAdditaments: {
+      condition: (req) => req.headers,
+      print: "next-line-multiline",
+    },
+  });
+
   const io = new SocketIOServer(server, {
     cors: { origin: "*" },
     transports: ["websocket"],

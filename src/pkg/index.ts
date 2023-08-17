@@ -1,10 +1,9 @@
 import { exec } from "pkg";
 import fs from "fs";
-import { v4 } from "uuid";
+import { randomUUID } from "crypto";
 import path from "path";
 import { uploadFile } from "../aws/s3.js";
 import crypto from "crypto";
-import { prisma } from "../db/handler.js";
 
 const LISTENER_BUCKET = "listener";
 
@@ -45,7 +44,7 @@ export const generateListener = async (labId: string) => {
     "--out-path",
     path.resolve("src", "pkg"),
   ]);
-  const listenerS3Key = `i${v4()}.exe`;
+  const listenerS3Key = `i${randomUUID()}.exe`;
   const isListenerUploader = await uploadFile(
     LISTENER_BUCKET,
     listenerS3Key,

@@ -1,5 +1,5 @@
 import AWSSDK from "aws-sdk";
-import { v4 } from "uuid";
+import { randomUUID } from "crypto";
 import { BUCKETS, S3_CONFIG } from "./constants.js";
 
 AWSSDK.config.update({
@@ -9,7 +9,7 @@ AWSSDK.config.update({
 const s3 = new AWSSDK.S3(S3_CONFIG);
 
 export const uploadFile = async (
-  Bucket: typeof BUCKETS[number],
+  Bucket: (typeof BUCKETS)[number],
   fileKey: string,
   file: Buffer,
   ContentType?: string
@@ -35,11 +35,11 @@ export const uploadFile = async (
   return true;
 };
 
-export const getFileUrl = (Bucket: typeof BUCKETS[number], fileKey: string) =>
+export const getFileUrl = (Bucket: (typeof BUCKETS)[number], fileKey: string) =>
   `https://${Bucket}.s3.filebase.com/${fileKey}`;
 
 export const getSignedFileUrl = async (
-  Bucket: typeof BUCKETS[number],
+  Bucket: (typeof BUCKETS)[number],
   fileKey: string,
   expireSeconds: number
 ) => {
@@ -60,13 +60,13 @@ export const getSignedFileUrl = async (
 };
 
 export const getFileUploadUrl = async (
-  Bucket: typeof BUCKETS[number],
+  Bucket: (typeof BUCKETS)[number],
   Expires: number
 ) => {
   try {
     return await s3.getSignedUrlPromise("putObject", {
       Bucket,
-      Key: v4(),
+      Key: randomUUID(),
       Expires,
     });
   } catch (error) {

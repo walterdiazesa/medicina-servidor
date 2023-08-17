@@ -27,7 +27,7 @@ jobs:
           linode_user="${{ secrets.LINODE_USER }}"
           linode_password="${{ secrets.LINODE_PASSWORD }}"
 
-          sshpass -p "$linode_password" ssh "$linode_user"@"$linode_ip" '
+          sshpass -p "$linode_password" ssh -v "$linode_user"@"$linode_ip" '
             cd medicina-servidor/
             git pull
             pm2 restart flemik-node

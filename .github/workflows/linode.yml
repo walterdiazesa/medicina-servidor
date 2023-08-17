@@ -18,14 +18,26 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
+      - name: Get Linode IP from secret
+        id: linode-ip
+        run: echo "::set-output name=ip::${{ secrets.LINODE_IP }}"
+
+      - name: Get Linode USER from secret
+        id: linode-user
+        run: echo "::set-output name=user::${{ secrets.LINODE_USER }}"
+
+      - name: Get Linode PASSWORD from secret
+        id: linode-password
+        run: echo "::set-output name=password::${{ secrets.LINODE_PASSWORD }}"
+
       - name: Install sshpass
         run: sudo apt-get update && sudo apt-get install -y sshpass
 
       - name: Linode Commands
         run: |
-          linode_ip="${{ secrets.LINODE_IP }}"
-          linode_user="${{ secrets.LINODE_USER }}"
-          linode_password="${{ secrets.LINODE_PASSWORD }}"
+          linode_ip="${{ steps.linode-ip.outputs.ip }}"
+          linode_user="${{ steps.linode-user.outputs.user }}"
+          linode_password="${{ steps.linode-password.outputs.password }}"
 
           sshpass -p "$linode_password" ssh -v "$linode_user"@"$linode_ip" '
             cd medicina-servidor/

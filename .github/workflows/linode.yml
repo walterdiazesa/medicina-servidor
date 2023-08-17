@@ -10,37 +10,14 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-
-      - name: Set up SSH keys
-        uses: webfactory/ssh-agent@v0.5.1
-        with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-
-      - name: Get Linode IP from secret
-        id: linode-ip
-        run: echo "::set-output name=ip::${{ secrets.LINODE_IP }}"
-
-      - name: Get Linode USER from secret
-        id: linode-user
-        run: echo "::set-output name=user::${{ secrets.LINODE_USER }}"
-
-      - name: Get Linode PASSWORD from secret
-        id: linode-password
-        run: echo "::set-output name=password::${{ secrets.LINODE_PASSWORD }}"
-
-      - name: Install sshpass
-        run: sudo apt-get update && sudo apt-get install -y sshpass
-
       - name: Linode Commands
-        run: |
-          linode_ip="${{ steps.linode-ip.outputs.ip }}"
-          linode_user="${{ steps.linode-user.outputs.user }}"
-          linode_password="${{ steps.linode-password.outputs.password }}"
-
-          sshpass -p "$linode_password" ssh -v "$linode_user"@"$linode_ip" '
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.IP }}
+          username: ${{ secrets.USER }}
+          password: ${{ secrets.PASSWORD }}
+          port: 22
+          script: |
             cd medicina-servidor/
             git pull
             pm2 restart flemik-node
-          '

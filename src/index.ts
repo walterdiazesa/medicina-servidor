@@ -37,9 +37,9 @@ export const getActiveIO = () => {
   return _io[0];
 };
 
-const corsWhiteList = [process.env.APP_HOST];
+const corsWhiteList = [process.env.APP_HOST, process.env.API_HOST];
 if (process.env.NODE_ENV.trim() === "DEV")
-  corsWhiteList.push("http://localhost:3000");
+  corsWhiteList.push("http://localhost:3000", "http://localhost:8080");
 
 // && process.env.NODE_ENV.trim() !== "DEV"
 if (cluster.isPrimary && process.env.USE_MASTER_THREAD?.trim() !== "true") {

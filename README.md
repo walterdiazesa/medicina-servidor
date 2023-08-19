@@ -12,7 +12,9 @@ An end-to-end clinical laboratory management software: payment control and test 
 Flemik is the solution that captures data transmitted by a blood chemistry analyzer, encrypts it using the latest encryption technology, and sends it to our server which instantly transforms the analyzer data into understandable text for our clients. You can view this data on our website from any device and even convert it directly into a PDF file with a wide range of customizations to match your laboratory's standards. You can sign and digitally seal the PDF, and if desired, share it directly with the patient.
 
 🛠: [Express](https://expressjs.com/), [Prisma](https://www.prisma.io/), [Socket.IO](https://socket.io/), [Filebase](https://filebase.com/), [NodeMailer](https://nodemailer.com/), [PKG](https://github.com/vercel/pkg),
-📚: Self hosted and managed on a [Linode (Dallas, TX)](https://www.linode.com/) instance with [Mongo](https://www.mongodb.com/) Cluster and [Redis](https://redis.io/)
+
+📚: Self hosted, managed by CI/CD on a [Linode (Dallas, TX)](https://www.linode.com/) instance with [Mongo](https://www.mongodb.com/) Cluster and [Redis](https://redis.io/)
+
 📱: https://github.com/walterdiazesa/medicina-app
 
 # About Linode Instance
@@ -97,3 +99,61 @@ Display redis query:
 redis-cli
 ping
 ```
+
+# Application Flow
+
+- The tests will automatically be captured from the same network of the chemistry analyzer thanks to the **Chemistry analyzer listener**, then processed, and they will appear on the "`Exámenes`" tab with a pulse dot to indicate you have a new incoming test, without requiring manual refresh or interaction.
+- You can be the owner of many laboratories, and be an employee for many others
+- The employees of your laboratory/ies can be employees of other laboratories as well
+- There are 3 different account privileges, each account consists of a combination of these privileges for each laboratory, **owner**, **manager** and **employee**
+
+* Flemik is fully compatible with all different screen sizes
+
+https://github.com/walterdiazesa/medicina-app/assets/58494087/08000692-9dc2-427b-b875-160138e8034b
+
+### 1- Create an account for your laboratory, and wait for your **Chemistry analyzer listener** to be ready (just a couple seconds)
+
+[RegisterLab](https://github.com/walterdiazesa/medicina-app/assets/58494087/16811726-e922-4c72-a7ac-1e9cfa52b2b5)
+
+The [quick-start page](https://www.flemik.com/quick-start) will guide you on how to use the listener and platform
+
+<img width="1728" alt="image" src="https://github.com/walterdiazesa/medicina-app/assets/58494087/1bd7c225-68bd-4c23-8900-296ace0f0d42">
+
+### 2- Go to your laboratory settings page, and add employees to your laboratory
+
+(You can also manage personalization settings for the laboratory from there, as well as uploading your laboratory stamp and signature)
+
+- If the employee already has an account on the platform, it will be immediately added to your employee list, you can assign them manager privileges for your laboratory if you wish
+- If the employee is not registered on the platform yet, it will receive a mail to direct them to the employee registration page (2.1), you will see the user's status as "`Pending from registration`"
+
+[AddEmployees](https://github.com/walterdiazesa/medicina-app/assets/58494087/8ac45eb5-5e6e-4fca-8971-f4d834fd844d)
+
+### 2.1- If you're a new employee on the platform you will receive an email invitation for the laboratory
+
+<img width="1404" alt="image" src="https://github.com/walterdiazesa/medicina-app/assets/58494087/8fa53753-c553-44d1-b12b-7a2d965abd0e">
+
+[RegisterAsEmployee](https://github.com/walterdiazesa/medicina-app/assets/58494087/fdc269bd-b3da-41b6-9b80-67435d99df6c)
+
+Now you have 2 different listeners, one for each laboratory of which you're an employee/owner, you will also gain access to the tests of each laboratory you're related with
+
+<img width="1728" alt="image" src="https://github.com/walterdiazesa/medicina-app/assets/58494087/19fad2fd-afd8-4cd7-bb89-76c6f37603f6">
+
+If the laboratory assign you **Manager privileges** you will unlock a tab for "`Laboratorios`", in which you have in display all the laboratories' settings you're in charge of
+
+<img width="1728" alt="image" src="https://github.com/walterdiazesa/medicina-app/assets/58494087/75d5d65f-6001-4736-b33a-69572603866c">
+
+### 3- Add patients
+
+You can create (or find) your patients either on the "`Pacientes`" tab or you can create them (or assign the patient's test) directly on the page of an specific test
+
+[AddPatients](https://github.com/walterdiazesa/medicina-app/assets/58494087/6aafc5fb-d0e0-4e27-87ec-ceac1be2b99e)
+
+### 4- Update test data, add observations, validate the test, print PDF, and send the link to the client's email
+
+[UpdateTestData](https://github.com/walterdiazesa/medicina-app/assets/58494087/2d96cbef-76c2-43bc-b815-c3e9a6cdcc77)
+
+The PDF can be seen without requiring any form of storage or authentication, using either the QR code or the [magic link](https://flemik.com/test/631fa6c48a24419e13859a35?access=ZUh1SFgzclJUTGckOG1MWHlWZ3BoQW8)
+
+- If your laboratory has signature and/or stamp setup, you will also see it in the PDF
+
+<img width="304" alt="image" src="https://github.com/walterdiazesa/medicina-app/assets/58494087/811916d2-1e73-457d-a2a7-692f77992062">

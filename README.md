@@ -150,6 +150,18 @@ You can create (or find) your patients either on the "`Pacientes`" tab or you ca
 
 ### 4- Update test data, add observations, validate the test, print PDF, and send the link to the client's email
 
+- An employee is required to verify a test by ensuring that all the values on the chemistry analyzer are properly calibrated. You have the option to personally validate the test on the test page or (if you have manager or owner privileges) to delegate this task to another colleague.
+
+[RequestTestValidation](https://github.com/walterdiazesa/medicina-app/assets/58494087/788b1760-c742-45bb-94ab-561f7c8a5d5d)
+
+- The employee will receive an email containing the test data, allowing them to perform the validation remotely without needing to log in to the platform. Alternatively, they can access a link to view and validate the test on the platform if they prefer.
+
+<img width="1411" alt="image" src="https://github.com/walterdiazesa/medicina-app/assets/58494087/7b7dc50a-7279-4e58-9fb2-19dfc9ac3e55">
+
+[ValidateTest](https://github.com/walterdiazesa/medicina-app/assets/58494087/e2b898f2-e394-4840-8c38-be9a5a5c9bbf)
+
+- Assign the corresponding patient of the test to unlock the PDF
+
 [UpdateTestData](https://github.com/walterdiazesa/medicina-app/assets/58494087/2d96cbef-76c2-43bc-b815-c3e9a6cdcc77)
 
 The PDF can be seen without requiring any form of storage or authentication, using either the QR code or the [magic link](https://flemik.com/test/631fa6c48a24419e13859a35?access=ZUh1SFgzclJUTGckOG1MWHlWZ3BoQW8)
@@ -157,3 +169,9 @@ The PDF can be seen without requiring any form of storage or authentication, usi
 - If your laboratory has signature and/or stamp setup, you will also see it in the PDF
 
 <img width="304" alt="image" src="https://github.com/walterdiazesa/medicina-app/assets/58494087/811916d2-1e73-457d-a2a7-692f77992062">
+
+# Vitals
+
+<img width="1237" alt="image" src="https://github.com/walterdiazesa/medicina-app/assets/58494087/bae70d19-9ec7-4a84-bdcb-c9e7ad53e097">
+<img width="976" alt="image" src="https://github.com/walterdiazesa/medicina-app/assets/58494087/08dea4a8-8cb5-4e35-b7ce-2dcaf92b198d">
+<img width="979" alt="image" src="https://github.com/walterdiazesa/medicina-app/assets/58494087/b2e34b0c-3da5-4f0e-a2a4-1687424d203e">

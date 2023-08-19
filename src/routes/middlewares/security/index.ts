@@ -15,11 +15,6 @@ export function routesGuard(
     ];
     const isOperationAllowed = (path: string, method: string) => {
       if (!isDomainAllowed) {
-        console.log(
-          "path validation",
-          path,
-          path.startsWith("/test/validation/submit")
-        );
         // Validation of test from mail link
         if (path.startsWith("/test/validation/submit")) return true;
         if (path.startsWith("/test") && ["GET", "PUT"].includes(method))
